@@ -59,8 +59,8 @@ Quiz_Application_Backend/
 
 ### Step 1: Clone Repository
 ```bash
-git clone https://github.com/yourusername/quiz-application-backend.git
-cd quiz-application-backend
+git clone https://github.com/aniketShukla1605/Quiz_App_Backend.git
+cd Quiz_App_Backend
 ```
 ### Step 2: Start Services in Order
 - Run service-registry
