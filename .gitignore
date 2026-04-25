@@ -1,0 +1,15 @@
+target/
+*.class
+*.log
+*.jar
+*.war
+
+.idea/
+*.iml
+.vscode/
+
+.mvn/
+.gradle/
+build/
+
+application.properties
