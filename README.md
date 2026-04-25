@@ -48,10 +48,10 @@ Handles quiz-related operations:
 ## 📂 Project Structure
 
 Quiz_Application_Backend/
-│── api-gateway/
-│── question/
-│── quiz/
-│── service-registry/
+- │── api-gateway/
+- │── question/
+- │── quiz/
+- │── service-registry/
 
 ---
 
@@ -70,45 +70,45 @@ cd Quiz_App_Backend
 
 ## 🔌 Default Ports
 Service	Port
-Service Registry	8761
-API Gateway	8080 / custom
-Question Service	8081
-Quiz Service	8090
+- Service Registry	8761
+- API Gateway	8080 / custom
+- Question Service	8081
+- Quiz Service	8090
 
 ## 📌 API Endpoints
 ### Question Service
 Method	Endpoint	Description
-GET	/question/allQuestions	Get all questions
-GET	/question/category/{category}	Get questions by category
-POST	/question/add	Add a question
-GET	/question/generate?category=Java&numOfQ=5	Generate quiz questions
-POST	/question/getQuestions	Get questions by IDs
-POST	/question/getScore	Calculate score
+- GET	/question/allQuestions	Get all questions
+- GET	/question/category/{category}	Get questions by category
+- POST	/question/add	Add a question
+- GET	/question/generate?category=Java&numOfQ=5	Generate quiz questions
+- POST	/question/getQuestions	Get questions by IDs
+- POST	/question/getScore	Calculate score
 
 ### Quiz Service
 Method	Endpoint	Description
-POST	/quiz/create	Create quiz
-GET	/quiz/get/{id}	Get quiz questions
-POST	/quiz/submit/{id}	Submit quiz
+- POST	/quiz/create	Create quiz
+- GET	/quiz/get/{id}	Get quiz questions
+- POST	/quiz/submit/{id}	Submit quiz
 
 ## 🌟 Features
-Microservices architecture
-RESTful APIs
-Service discovery using Eureka
-API Gateway routing
-Quiz creation with random questions
-Quiz submission and score calculation
-Scalable backend design
+- Microservices architecture
+- RESTful APIs
+- Service discovery using Eureka
+- API Gateway routing
+- Quiz creation with random questions
+- Quiz submission and score calculation
+- Scalable backend design
 
 ## 🔮 Future Enhancements
-JWT Authentication
-Role-based access (Teacher / Student)
-Frontend Integration
-Docker Support
-Kafka for communication
-Leaderboard
-Timer-based quizzes
-Result history
+- JWT Authentication
+- Role-based access (Teacher / Student)
+- Frontend Integration
+- Docker Support
+- Kafka for communication
+- Leaderboard
+- Timer-based quizzes
+- Result history
 
 ## 👨‍💻 Author
 Aniket Shukla
