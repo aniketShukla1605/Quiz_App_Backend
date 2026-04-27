@@ -43,6 +43,12 @@ Handles quiz-related operations:
 - Fetch quiz questions
 - Submit quiz
 
+### 5️⃣ Auth Service
+Handles authentications:
+- login
+- register
+- logout
+
 ---
 
 ## 📂 Project Structure
