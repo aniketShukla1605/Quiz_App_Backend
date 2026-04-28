@@ -103,6 +103,68 @@ public class AuthService {
         return ResponseEntity.ok("Logged out successfully");
     }
 
+    public ResponseEntity<?> refresh(String refreshTokenCookie,
+                                     HttpServletResponse response) {
+
+        try {
+            Claims claims = jwtService.extractClaims(refreshTokenCookie);
+
+            String type = claims.get("type", String.class);
+            if (!"refresh".equals(type)) {
+                return ResponseEntity.status(401).body("Invalid token type");
+            }
+
+            UUID userId = UUID.fromString(claims.getSubject());
+            UUID oldTokenId = UUID.fromString(claims.get("tokenId", String.class));
+
+            RefreshToken oldToken = refreshTokenRepository
+                    .findByTokenIdAndIsActive(oldTokenId,true)
+                    .orElse(null);
+
+            if (oldToken == null) {
+                return ResponseEntity.status(401).body("Token inactive or not found");
+            }
+
+            oldToken.setActive(false);
+            refreshTokenRepository.save(oldToken);
+
+            User user = oldToken.getUser();
+
+            UUID newTokenId = UUID.randomUUID();
+
+            String newAccessToken = jwtService.generateAccessToken(
+                    user.getId(),
+                    user.getEmail(),
+                    user.getRole()
+            );
+
+            String newRefreshToken = jwtService.generateRefreshToken(
+                    user.getId(),
+                    newTokenId
+            );
+
+            RefreshToken newToken = RefreshToken.builder()
+                    .tokenId(newTokenId)
+                    .user(user)
+                    .isActive(true)
+                    .createdAt(LocalDateTime.now())
+                    .expiredAt(LocalDateTime.now().plusDays(7))
+                    .build();
+
+            refreshTokenRepository.save(newToken);
+
+            addCookie(response, "accessToken", newAccessToken, 900);
+            addCookie(response, "refreshToken", newRefreshToken, 604800);
+
+            return ResponseEntity.ok(
+                    new AuthResponse(user.getId(), user.getEmail(), user.getRole())
+            );
+
+        } catch (Exception e) {
+            return ResponseEntity.status(401).body("Invalid or expired refresh token");
+        }
+    }
+
     private void addCookie(HttpServletResponse response,
                            String name,
                            String value,

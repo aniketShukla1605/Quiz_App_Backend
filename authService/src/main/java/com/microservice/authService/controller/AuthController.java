@@ -43,6 +43,19 @@ public class AuthController {
         return authService.logout(refreshToken, response);
     }
 
+    @PostMapping("/refresh")
+    public ResponseEntity<?> refresh(HttpServletRequest request,
+                                     HttpServletResponse response) {
+
+        String refreshToken = getCookieValue(request, "refreshToken");
+
+        if (refreshToken == null) {
+            return ResponseEntity.status(401).body("No refresh token found");
+        }
+
+        return authService.refresh(refreshToken, response);
+    }
+
     private String getCookieValue(HttpServletRequest request, String name) {
 
         if (request.getCookies() == null) return null;
