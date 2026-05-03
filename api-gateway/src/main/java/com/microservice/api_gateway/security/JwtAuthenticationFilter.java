@@ -33,7 +33,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
             String role = claims.get("role", String.class);
 
-            if (path.startsWith("/quiz/create") && !role.equals("TEACHER")) {
+            if (path.startsWith("/quiz/create") || path.startsWith("/quiz/createCustom") && !role.equals("TEACHER")) {
                 exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
                 return exchange.getResponse().setComplete();
             }
@@ -43,7 +43,18 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
                 return exchange.getResponse().setComplete();
             }
 
-            if (path.startsWith("/quiz/submit") && !role.equals("STUDENT")) {
+            if (path.matches("/quiz/\\d+/submit") && !role.equals("STUDENT")) {
+                exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
+                return exchange.getResponse().setComplete();
+            }
+
+            if (path.startsWith("/auth") || path.startsWith("/eureka") || path.startsWith("/profile/internal")) {
+                exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
+                return exchange.getResponse().setComplete();
+            }
+
+            if ((path.matches("/quiz/\\d+/start") || path.matches("/quiz/\\d+/sync"))
+                    && !role.equals("STUDENT")) {
                 exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
                 return exchange.getResponse().setComplete();
             }
