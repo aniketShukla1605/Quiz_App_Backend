@@ -27,7 +27,7 @@ public class JwtService {
                 .claim("role",role.name())
                 .claim("type","access")
                 .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis()+1000*60*15))
+                .setExpiration(new Date(System.currentTimeMillis()+1000*60*60*25))
                 .signWith(getKey())
                 .compact();
     }
@@ -38,12 +38,12 @@ public class JwtService {
                 .claim("type","refresh")
                 .claim("tokenId",tokenId.toString())
                 .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis()+1000*60*15))
+                .setExpiration(new Date(System.currentTimeMillis()+1000*60*60*24*7))
                 .signWith(getKey())
                 .compact();
     }
 
     public Claims extractClaims(String token) {
-        return Jwts.parser().setSigningKey(getKey()).parseClaimsJws(token).getBody();
+        return Jwts.parserBuilder().setSigningKey(getKey()).build().parseClaimsJws(token).getBody();
     }
 }

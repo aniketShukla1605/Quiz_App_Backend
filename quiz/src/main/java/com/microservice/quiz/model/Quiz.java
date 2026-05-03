@@ -16,4 +16,6 @@ public class Quiz {
     //A Quiz can have many Questions and a Question can be in many Quizzes
     @ElementCollection
     private List<Integer> questionId;
+
+    private Integer durationMinutes = 30; //default value is 30
 }

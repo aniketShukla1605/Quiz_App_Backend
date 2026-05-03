@@ -1,6 +1,7 @@
 package com.microservice.quiz.controller;
 
 
+import com.microservice.quiz.dto.CustomQuizDto;
 import com.microservice.quiz.dto.QuestionDto;
 import com.microservice.quiz.dto.QuizDto;
 import com.microservice.quiz.dto.Response;
@@ -18,10 +19,12 @@ public class QuizController {
     @Autowired
     private QuizService quizService;
 
-    //Create a Quiz with random Questions
+
+
+    //Create a Quiz with random Questions only for TEACHER
     @PostMapping("/create")
     public ResponseEntity<String> createQuiz(@RequestBody QuizDto quizDto){
-        return quizService.createQuiz(quizDto.getCategory(), quizDto.getNumOfQ(), quizDto.getTitle());
+        return quizService.createQuiz(quizDto.getCategory(), quizDto.getNumOfQ(), quizDto.getTitle(), quizDto.getDuration());
     }
 
     //Get all the questions of a quiz
@@ -30,9 +33,19 @@ public class QuizController {
         return quizService.getQuizQuestions(id);
     }
 
-    //submit a quiz
+    //only TEACHER role can reach this (enforced at gateway)
+    @PostMapping("/createCustom")
+    public ResponseEntity<String> createCustomQuiz(@RequestBody CustomQuizDto customQuizDto) {
+        return quizService.createCustomQuiz(customQuizDto);
+    }
+
+    //only STUDENT role can access this
+    //No longer in use (replaced by QuizAttempt submit controller)
     @PostMapping("/submit/{id}")
-    public ResponseEntity<Integer> submitQuiz(@PathVariable int id, @RequestBody List<Response> responses){
-        return quizService.calculateResult(id,responses);
+    public ResponseEntity<Integer> submitQuiz(
+            @PathVariable int id,
+            @RequestBody List<Response> responses,
+            @RequestHeader("X-User-Id") String userId) {
+        return quizService.calculateResult(id, responses, userId);
     }
 }

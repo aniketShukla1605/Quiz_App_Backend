@@ -1,5 +1,6 @@
 package com.microservice.question.controller;
 
+import com.microservice.question.dto.CreateQuizWithQuestionsDto;
 import com.microservice.question.dto.QuestionDto;
 import com.microservice.question.dto.Response;
 import com.microservice.question.model.Question;
@@ -41,10 +42,17 @@ public class QuestionController {
         return questionService.generateQuestions(category,numberOfQuestions);
     }
 
+    //Create Custom Quiz
+    @PostMapping("/createQuizWithQuestions")
+    public ResponseEntity<String> createQuizWithQuestions(
+            @RequestBody CreateQuizWithQuestionsDto request) {
+        return questionService.createQuizWithQuestions(request);
+    }
+
     //Get Questions
-    @PostMapping("getQuestions")
+    @PostMapping("/getQuestions")
     public ResponseEntity<List<QuestionDto>> getQuestionsFromId(@RequestBody List<Integer> ids) {
-        return questionService.getQuetionsFromId(ids);
+        return questionService.getQuestionsFromId(ids);
     }
 
     //Get Score

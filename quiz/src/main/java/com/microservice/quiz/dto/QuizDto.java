@@ -11,4 +11,5 @@ public class QuizDto {
     private String category;
     private int numOfQ;
     private String title;
+    private Integer duration;
 }
