@@ -55,7 +55,7 @@ Handles User Profile:
 - update profile
 - view quiz history
 
-### 7️⃣ Resukt Service
+### 7️⃣ Result Service
 Handles Results:
 - history
 - attempt
