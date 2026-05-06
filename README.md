@@ -49,15 +49,31 @@ Handles authentications:
 - register
 - logout
 
+### 6️⃣ Profile Service
+Handles User Profile:
+- view profile
+- update profile
+- view quiz history
+
+### 7️⃣ Resukt Service
+Handles Results:
+- history
+- attempt
+- score summary
+
 ---
 
 ## 📂 Project Structure
 
 Quiz_Application_Backend/
 - │── api-gateway/
+- │── authService/
+- │── profile-service/
 - │── question/
 - │── quiz/
+- │── result-service/
 - │── service-registry/
+
 
 ---
 
@@ -73,29 +89,19 @@ cd Quiz_App_Backend
 - Run api-gateway
 - Run question
 - Run quiz
+- Run profile-service
+- Run authService
+- Run result-service
 
 ## 🔌 Default Ports
 Service	Port
 - Service Registry	8761
-- API Gateway	8080 / custom
+- API Gateway	8762 / custom
 - Question Service	8081
-- Quiz Service	8090
-
-## 📌 API Endpoints
-### Question Service
-Method	Endpoint	Description
-- GET	/question/allQuestions	Get all questions
-- GET	/question/category/{category}	Get questions by category
-- POST	/question/add	Add a question
-- GET	/question/generate?category=Java&numOfQ=5	Generate quiz questions
-- POST	/question/getQuestions	Get questions by IDs
-- POST	/question/getScore	Calculate score
-
-### Quiz Service
-Method	Endpoint	Description
-- POST	/quiz/create	Create quiz
-- GET	/quiz/get/{id}	Get quiz questions
-- POST	/quiz/submit/{id}	Submit quiz
+- Quiz Service	8080
+- Auth Service 8083
+- Result Service 8084
+- Profile Service 8070
 
 ## 🌟 Features
 - Microservices architecture
@@ -105,16 +111,15 @@ Method	Endpoint	Description
 - Quiz creation with random questions
 - Quiz submission and score calculation
 - Scalable backend design
+- User Profile
+- Result History
 
 ## 🔮 Future Enhancements
-- JWT Authentication
-- Role-based access (Teacher / Student)
 - Frontend Integration
 - Docker Support
 - Kafka for communication
 - Leaderboard
-- Timer-based quizzes
-- Result history
+- Timer-based quizzes using websocket
 
 ## 👨‍💻 Author
 Aniket Shukla
