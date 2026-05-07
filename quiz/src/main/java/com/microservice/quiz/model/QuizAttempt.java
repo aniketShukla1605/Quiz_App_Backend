@@ -39,4 +39,12 @@ public class QuizAttempt {
             joinColumns = @JoinColumn(name = "attempt_id")
     )
     private List<AnswerEntry> answers; //{questionId, answer}
+
+    //adds random id if attempt id is not present or given
+    @PrePersist
+    public void prePersist() {
+        if (attemptId == null) {
+            attemptId = UUID.randomUUID();
+        }
+    }
 }

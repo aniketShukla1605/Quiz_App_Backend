@@ -1,0 +1,53 @@
+package com.microservice.result_service.controller;
+
+import com.microservice.result_service.dto.RecordResultRequest;
+import com.microservice.result_service.dto.ResultHistoryResponse;
+import com.microservice.result_service.dto.ScoreSummaryResponse;
+import com.microservice.result_service.service.ResultService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+import java.util.UUID;
+
+@RestController
+@RequestMapping("/results")
+@RequiredArgsConstructor
+public class ResultController {
+
+    private final ResultService resultService;
+
+    @GetMapping("/me/history")
+    public ResponseEntity<List<ResultHistoryResponse>> getMyHistory(@RequestHeader("X-User-Id") UUID studentId) {
+        return resultService.getMyHistory(studentId);
+    }
+
+    @GetMapping("/me/summary")
+    public ResponseEntity<ScoreSummaryResponse> getMyScoreSummary(@RequestHeader("X-User-Id") UUID studentId) {
+        return resultService.getScoreSummary(studentId);
+    }
+
+    @PostMapping("/me/sync")
+    public ResponseEntity<List<ResultHistoryResponse>> syncMyResults(@RequestHeader("X-User-Id") UUID studentId) {
+        return resultService.syncMyResults(studentId);
+    }
+
+    @GetMapping("/attempt/{attemptId}")
+    public ResponseEntity<ResultHistoryResponse> getAttemptResult(
+            @PathVariable UUID attemptId,
+            @RequestHeader("X-User-Id") UUID studentId) {
+        return resultService.getAttemptResult(attemptId, studentId);
+    }
+
+    @PostMapping("/internal/record")
+    public ResponseEntity<Void> recordResult(@RequestBody RecordResultRequest request) {
+        return resultService.recordResult(request);
+    }
+}

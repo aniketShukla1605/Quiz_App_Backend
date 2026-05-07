@@ -2,6 +2,7 @@ package com.microservice.quiz.service;
 
 import com.microservice.quiz.dto.*;
 import com.microservice.quiz.feign.QuizInterface;
+import com.microservice.quiz.feign.ResultServiceClient;
 import com.microservice.quiz.model.AttemptState;
 import com.microservice.quiz.model.Quiz;
 import com.microservice.quiz.model.QuizAttempt;
@@ -26,6 +27,7 @@ public class QuizAttemptService {
     private final QuizAttemptRepository attemptRepository;
     private final QuizRepo quizRepo;
     private final QuizInterface quizInterface;
+    private final ResultServiceClient resultServiceClient;
 
     private static final int DEFAULT_DURATION_MINUTES = 30;
 
@@ -191,6 +193,7 @@ public class QuizAttemptService {
             attempt.setSubmissionMethod(method);
 
             attemptRepository.save(attempt);
+            publishResult(attempt);
 
             return ResponseEntity.ok(SubmitResponse.builder()
                     .attemptId(attempt.getAttemptId())
@@ -240,6 +243,7 @@ public class QuizAttemptService {
             attempt.setSubmissionMethod(SubmissionMethod.AUTO);
 
             attemptRepository.save(attempt);
+            publishResult(attempt);
 
             return ResponseEntity.ok(SyncResponse.builder()
                     .serverTime(now)
@@ -265,5 +269,61 @@ public class QuizAttemptService {
                     .submissionMethod(updated.getSubmissionMethod().name())
                     .build());
         }
+    }
+
+    public ResponseEntity<AttemptResultResponse> getAttemptResult(UUID attemptId) {
+        return attemptRepository.findById(attemptId)
+                .filter(this::isFinalAttempt)
+                .map(attempt -> ResponseEntity.ok(toAttemptResultResponse(attempt)))
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    public ResponseEntity<List<AttemptResultResponse>> getStudentAttemptResults(UUID studentId) {
+        List<AttemptResultResponse> attempts = attemptRepository
+                .findByStudentIdAndStateInOrderBySubmittedAtDesc(
+                        studentId,
+                        List.of(AttemptState.SUBMITTED, AttemptState.GRADED)
+                )
+                .stream()
+                .map(this::toAttemptResultResponse)
+                .toList();
+
+        return ResponseEntity.ok(attempts);
+    }
+
+    private void publishResult(QuizAttempt attempt) {
+        try {
+            resultServiceClient.recordResult(ResultRecordRequest.builder()
+                    .attemptId(attempt.getAttemptId())
+                    .quizId(attempt.getQuizId())
+                    .studentId(attempt.getStudentId())
+                    .state(attempt.getState().name())
+                    .score(attempt.getScore())
+                    .maxScore(attempt.getMaxScore())
+                    .startedAt(attempt.getStartTime())
+                    .submittedAt(attempt.getSubmittedAt())
+                    .submissionMethod(attempt.getSubmissionMethod().name())
+                    .build());
+        } catch (Exception ignored) {
+            // Result history can be synced later from result-service if it is temporarily unavailable.
+        }
+    }
+
+    private boolean isFinalAttempt(QuizAttempt attempt) {
+        return attempt.getState() == AttemptState.SUBMITTED || attempt.getState() == AttemptState.GRADED;
+    }
+
+    private AttemptResultResponse toAttemptResultResponse(QuizAttempt attempt) {
+        return AttemptResultResponse.builder()
+                .attemptId(attempt.getAttemptId())
+                .quizId(attempt.getQuizId())
+                .studentId(attempt.getStudentId())
+                .state(attempt.getState().name())
+                .score(attempt.getScore())
+                .maxScore(attempt.getMaxScore())
+                .startedAt(attempt.getStartTime())
+                .submittedAt(attempt.getSubmittedAt())
+                .submissionMethod(attempt.getSubmissionMethod() == null ? null : attempt.getSubmissionMethod().name())
+                .build();
     }
 }
