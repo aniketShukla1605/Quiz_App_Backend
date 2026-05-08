@@ -19,10 +19,11 @@ import java.util.UUID;
 @AllArgsConstructor
 public class UserProfile {
     @Id
-    private UUID id;           // same ID as authService User
+    private UUID id;           //same ID as authService User
 
     private String displayName;
-    private String avatarUrl;
+    //Default avatar
+    private String avatarUrl = "https://res.cloudinary.com/dolfdzaf2/image/upload/v1778251943/user_w6ziip.png";
     private String bio;
 
     private LocalDateTime createdAt;
