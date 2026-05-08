@@ -11,8 +11,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import com.microservice.result_service.dto.LeaderboardEntryResponse;
+import org.springframework.data.domain.PageRequest;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -171,8 +174,34 @@ public class ResultService {
         return result.getScore() + "/" + result.getMaxScore() + " (" + result.getPercentage() + "%)";
     }
 
-    //to round up double value
+    //return leaderboard list
     private Double round(Double value) {
         return Math.round(value * 100.0) / 100.0;
     }
+
+    public ResponseEntity<List<LeaderboardEntryResponse>> getQuizLeaderboard(Integer quizId, int limit) {
+        int safeLimit = Math.max(1, Math.min(limit, 100));
+
+        List<ResultHistory> results = resultHistoryRepository
+                .findByQuizIdOrderByScoreDescSubmittedAtAsc(quizId, PageRequest.of(0, safeLimit));
+
+        List<LeaderboardEntryResponse> leaderboard = new ArrayList<>();
+
+        for (int i = 0; i < results.size(); i++) {
+            ResultHistory result = results.get(i);
+
+            leaderboard.add(LeaderboardEntryResponse.builder()
+                    .rank(i + 1)
+                    .studentId(result.getStudentId())
+                    .score(result.getScore())
+                    .maxScore(result.getMaxScore())
+                    .percentage(result.getPercentage())
+                    .submittedAt(result.getSubmittedAt())
+                    .submissionMethod(result.getSubmissionMethod())
+                    .build());
+        }
+
+        return ResponseEntity.ok(leaderboard);
+    }
+
 }
