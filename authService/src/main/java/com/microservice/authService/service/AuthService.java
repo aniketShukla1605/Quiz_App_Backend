@@ -1,9 +1,11 @@
 package com.microservice.authService.service;
 
 import com.microservice.authService.dto.AuthResponse;
+import com.microservice.authService.dto.GoogleLoginRequest;
 import com.microservice.authService.dto.LoginRequest;
 import com.microservice.authService.dto.RegisterRequest;
 import com.microservice.authService.entity.RefreshToken;
+import com.microservice.authService.entity.Role;
 import com.microservice.authService.entity.User;
 import com.microservice.authService.repository.RefreshTokenRepository;
 import com.microservice.authService.repository.UserRepository;
@@ -27,6 +29,7 @@ public class AuthService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final GoogleTokenService googleTokenService;
 
     private static final Pattern PASSWORD_PATTERN = Pattern.compile("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).{8,}$");
 
@@ -54,6 +57,47 @@ public class AuthService {
         if(user == null || !passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
             return ResponseEntity.status(401).body("Invalid credentials");
         }
+        return issueLoginResponse(user, response);
+    }
+
+    public ResponseEntity<?> googleLogin(GoogleLoginRequest request, HttpServletResponse response) {
+        try {
+            GoogleTokenService.GoogleUserInfo googleUser = googleTokenService.verify(request.getIdToken());
+
+            User user = userRepository.findByGoogleSubject(googleUser.subject())
+                    .or(() -> userRepository.findByEmail(googleUser.email()))
+                    .map(existingUser -> {
+                        if (existingUser.getGoogleSubject() == null) {
+                            existingUser.setGoogleSubject(googleUser.subject());
+                            existingUser.setUpdatedAt(LocalDateTime.now());
+                            return userRepository.save(existingUser);
+                        }
+                        return existingUser;
+                    })
+                    .orElseGet(() -> {
+                        Role role = request.getRole() == null ? Role.STUDENT : request.getRole();
+
+                        User newUser = User.builder()
+                                .email(googleUser.email())
+                                .passwordHash(passwordEncoder.encode(UUID.randomUUID().toString()))
+                                .googleSubject(googleUser.subject())
+                                .role(role)
+                                .createdAt(LocalDateTime.now())
+                                .updatedAt(LocalDateTime.now())
+                                .build();
+
+                        return userRepository.save(newUser);
+                    });
+
+            return issueLoginResponse(user, response);
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(500).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(401).body("Invalid Google token");
+        }
+    }
+
+    private ResponseEntity<?> issueLoginResponse(User user, HttpServletResponse response) {
         UUID tokenId = UUID.randomUUID();
 
         String accessToken = jwtService.generateAccessToken(

@@ -1,5 +1,6 @@
 package com.microservice.authService.controller;
 
+import com.microservice.authService.dto.GoogleLoginRequest;
 import com.microservice.authService.dto.LoginRequest;
 import com.microservice.authService.dto.RegisterRequest;
 import com.microservice.authService.service.AuthService;
@@ -28,6 +29,12 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest loginRequest, HttpServletResponse response) {
         return authService.login(loginRequest, response);
+    }
+
+    @PostMapping("/google")
+    public ResponseEntity<?> googleLogin(@Valid @RequestBody GoogleLoginRequest googleLoginRequest,
+                                         HttpServletResponse response) {
+        return authService.googleLogin(googleLoginRequest, response);
     }
 
     @PostMapping("/logout")
