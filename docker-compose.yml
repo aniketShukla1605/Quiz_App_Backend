@@ -1,0 +1,221 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: quiz-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  redis:
+    image: redis:7.4-alpine
+    container_name: quiz-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  service-registry:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_DIR: service-registry
+    container_name: quiz-service-registry
+    restart: unless-stopped
+    environment:
+      SPRING_APPLICATION_NAME: service-registry
+      SERVER_PORT: 8761
+      EUREKA_INSTANCE_HOSTNAME: service-registry
+      EUREKA_CLIENT_FETCH_REGISTRY: "false"
+      EUREKA_CLIENT_REGISTER_WITH_EUREKA: "false"
+    ports:
+      - "8761:8761"
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_DIR: authService
+    container_name: quiz-auth-service
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      service-registry:
+        condition: service_started
+    environment:
+      SPRING_APPLICATION_NAME: auth-service
+      SERVER_PORT: 8083
+      JAVA_TOOL_OPTIONS: -Deureka.client.serviceUrl.defaultZone=http://service-registry:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/authdb?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      JWT_SERVICE: this_is_secret_key_of_quiz_application_1234
+      GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
+      GOOGLE_OAUTH_JWK_SET_URI: https://www.googleapis.com/oauth2/v3/certs
+      EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE: http://service-registry:8761/eureka/
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+    ports:
+      - "8083:8083"
+
+  question:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_DIR: question
+    container_name: quiz-question-service
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      service-registry:
+        condition: service_started
+    environment:
+      SPRING_APPLICATION_NAME: question
+      SERVER_PORT: 8081
+      JAVA_TOOL_OPTIONS: -Deureka.client.serviceUrl.defaultZone=http://service-registry:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/questiondb?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE: http://service-registry:8761/eureka/
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+    ports:
+      - "8081:8081"
+
+  quiz:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_DIR: quiz
+    container_name: quiz-quiz-service
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      service-registry:
+        condition: service_started
+    environment:
+      SPRING_APPLICATION_NAME: quiz
+      SERVER_PORT: 8080
+      JAVA_TOOL_OPTIONS: -Deureka.client.serviceUrl.defaultZone=http://service-registry:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/quizdb?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE: http://service-registry:8761/eureka/
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+    ports:
+      - "8080:8080"
+
+  profile-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_DIR: profile-service
+    container_name: quiz-profile-service
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      service-registry:
+        condition: service_started
+    environment:
+      SPRING_APPLICATION_NAME: profile
+      SERVER_PORT: 8070
+      JAVA_TOOL_OPTIONS: -Deureka.client.serviceUrl.defaultZone=http://service-registry:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/profiledb?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
+      EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE: http://service-registry:8761/eureka/
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+    ports:
+      - "8070:8070"
+
+  result-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_DIR: result-service
+    container_name: quiz-result-service
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      service-registry:
+        condition: service_started
+    environment:
+      SPRING_APPLICATION_NAME: result-service
+      SERVER_PORT: 8084
+      JAVA_TOOL_OPTIONS: -Deureka.client.serviceUrl.defaultZone=http://service-registry:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/resultdb?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE: http://service-registry:8761/eureka/
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+    ports:
+      - "8084:8084"
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_DIR: api-gateway
+    container_name: quiz-api-gateway
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+      service-registry:
+        condition: service_started
+      auth-service:
+        condition: service_started
+      question:
+        condition: service_started
+      quiz:
+        condition: service_started
+      profile-service:
+        condition: service_started
+      result-service:
+        condition: service_started
+    environment:
+      SPRING_APPLICATION_NAME: api-gateway
+      SERVER_PORT: 8762
+      JAVA_TOOL_OPTIONS: -Deureka.client.serviceUrl.defaultZone=http://service-registry:8761/eureka/
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      JWT_SERVICE: this_is_secret_key_of_quiz_application_1234
+      EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE: http://service-registry:8761/eureka/
+      EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
+    ports:
+      - "8762:8762"
+
+volumes:
+  mysql-data:

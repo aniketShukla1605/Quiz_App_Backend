@@ -1,0 +1,9 @@
+.git
+.idea
+**/.idea
+**/target
+**/.gitignore
+**/HELP.md
+README.md
+docker-compose.yml
+docker/

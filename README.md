@@ -93,6 +93,40 @@ cd Quiz_App_Backend
 - Run authService
 - Run result-service
 
+## Docker Setup
+
+The repository includes Docker support for all microservices plus MySQL and Redis.
+
+Optional external credentials can be supplied through a local `.env` file. Use `.env.example` as the template for Google OAuth and Cloudinary values.
+
+### Run with Docker Compose
+```bash
+docker compose up --build
+```
+
+This starts:
+- MySQL on host port `3307`
+- Redis on port `6379`
+- Service Registry on port `8761`
+- API Gateway on port `8762`
+- Quiz Service on port `8080`
+- Question Service on port `8081`
+- Auth Service on port `8083`
+- Result Service on port `8084`
+- Profile Service on port `8070`
+
+MySQL databases are created automatically from `docker/mysql/init/01-create-databases.sql`.
+
+### Stop the Stack
+```bash
+docker compose down
+```
+
+To also remove the MySQL volume:
+```bash
+docker compose down -v
+```
+
 ## 🔌 Default Ports
 Service	Port
 - Service Registry	8761
