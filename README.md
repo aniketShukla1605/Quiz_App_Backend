@@ -150,7 +150,6 @@ Service	Port
 
 ## 🔮 Future Enhancements
 - Frontend Integration
-- Docker Support
 - Kafka for communication
 - Leaderboard
 - Timer-based quizzes using websocket
