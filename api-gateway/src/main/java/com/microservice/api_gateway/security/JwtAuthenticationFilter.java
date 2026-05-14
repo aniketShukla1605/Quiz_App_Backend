@@ -6,6 +6,7 @@ import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
 import org.springframework.http.HttpCookie;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
@@ -20,7 +21,9 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         String path = exchange.getRequest().getURI().getPath();
 
-        if (path.startsWith("/auth") || path.startsWith("/eureka")) {
+        if (exchange.getRequest().getMethod() == HttpMethod.OPTIONS
+                || path.startsWith("/auth")
+                || path.startsWith("/eureka")) {
             return chain.filter(exchange);
         }
         HttpCookie cookie = exchange.getRequest().getCookies().getFirst("accessToken");

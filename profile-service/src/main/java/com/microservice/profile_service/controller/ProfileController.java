@@ -19,6 +19,7 @@ public class ProfileController {
     private final ProfileService profileService;
     private final CloudinaryService cloudinaryService;
 
+
     private static final String DEFAULT_AVATAR = "https://res.cloudinary.com/dolfdzaf2/image/upload/v1778251943/user_w6ziip.png";
 
     @GetMapping("/me")
