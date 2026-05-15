@@ -11,7 +11,8 @@ import java.util.UUID;
 
 @Repository
 public interface QuizAttemptRepository extends JpaRepository<QuizAttempt, UUID> {
-    Optional<QuizAttempt> findByQuizIdAndStudentId(int quizId, UUID studentId);
+    Optional<QuizAttempt> findFirstByQuizIdAndStudentIdAndStateOrderByStartTimeDesc(int quizId, UUID studentId, AttemptState state);
+    Optional<QuizAttempt> findFirstByQuizIdAndStudentIdOrderByStartTimeDesc(int quizId, UUID studentId);
     boolean existsByQuizIdAndStudentIdAndState(int quizId, UUID studentId, AttemptState state);
     List<QuizAttempt> findByStudentIdAndStateInOrderBySubmittedAtDesc(UUID studentId, List<AttemptState> states);
 }

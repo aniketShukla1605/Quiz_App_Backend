@@ -39,7 +39,10 @@ public class QuizAttemptService {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Quiz not found");
         }
 
-        var existing = attemptRepository.findByQuizIdAndStudentId(quizId, studentId).orElse(null);
+        var existing = attemptRepository
+                .findFirstByQuizIdAndStudentIdAndStateOrderByStartTimeDesc(quizId, studentId, AttemptState.IN_PROGRESS)
+                .or(() -> attemptRepository.findFirstByQuizIdAndStudentIdOrderByStartTimeDesc(quizId, studentId))
+                .orElse(null);
         if (existing != null) {
             if (existing.getState() == AttemptState.IN_PROGRESS) {
                 //return current state instead of error
@@ -92,8 +95,7 @@ public class QuizAttemptService {
     //Sync
     public ResponseEntity<?> syncQuiz(int quizId, UUID studentId, SyncRequest request) {
 
-        QuizAttempt attempt = attemptRepository.findByQuizIdAndStudentId(quizId, studentId)
-                .orElse(null);
+        QuizAttempt attempt = findAttemptForRequest(quizId, studentId, request.getAttemptId());
 
         if (attempt == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Attempt not found");
@@ -141,8 +143,7 @@ public class QuizAttemptService {
     //SUBMIT
     public ResponseEntity<?> submitQuiz(int quizId, UUID studentId, SubmitRequest request) {
 
-        QuizAttempt attempt = attemptRepository.findByQuizIdAndStudentId(quizId, studentId)
-                .orElse(null);
+        QuizAttempt attempt = findAttemptForRequest(quizId, studentId, request.getAttemptId());
 
         if (attempt == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Attempt not found");
@@ -207,7 +208,7 @@ public class QuizAttemptService {
 
         } catch (ObjectOptimisticLockingFailureException e) {
             //return existing result
-            QuizAttempt updated = attemptRepository.findByQuizIdAndStudentId(quizId, studentId)
+            QuizAttempt updated = attemptRepository.findFirstByQuizIdAndStudentIdOrderByStartTimeDesc(quizId, studentId)
                     .orElseThrow();
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body(SubmitResponse.builder()
@@ -257,7 +258,7 @@ public class QuizAttemptService {
 
         } catch (ObjectOptimisticLockingFailureException e) {
             QuizAttempt updated = attemptRepository
-                    .findByQuizIdAndStudentId(attempt.getQuizId(), attempt.getStudentId())
+                    .findFirstByQuizIdAndStudentIdOrderByStartTimeDesc(attempt.getQuizId(), attempt.getStudentId())
                     .orElseThrow();
             return ResponseEntity.ok(SyncResponse.builder()
                     .serverTime(LocalDateTime.now())
@@ -311,6 +312,19 @@ public class QuizAttemptService {
 
     private boolean isFinalAttempt(QuizAttempt attempt) {
         return attempt.getState() == AttemptState.SUBMITTED || attempt.getState() == AttemptState.GRADED;
+    }
+
+    private QuizAttempt findAttemptForRequest(int quizId, UUID studentId, UUID attemptId) {
+        if (attemptId != null) {
+            return attemptRepository.findById(attemptId)
+                    .filter(attempt -> attempt.getQuizId() == quizId && attempt.getStudentId().equals(studentId))
+                    .orElse(null);
+        }
+
+        return attemptRepository
+                .findFirstByQuizIdAndStudentIdAndStateOrderByStartTimeDesc(quizId, studentId, AttemptState.IN_PROGRESS)
+                .or(() -> attemptRepository.findFirstByQuizIdAndStudentIdOrderByStartTimeDesc(quizId, studentId))
+                .orElse(null);
     }
 
     private AttemptResultResponse toAttemptResultResponse(QuizAttempt attempt) {

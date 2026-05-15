@@ -141,16 +141,13 @@ services:
       service-registry:
         condition: service_started
     environment:
-      SPRING_APPLICATION_NAME: profile
+      SPRING_APPLICATION_NAME: profile-service
       SERVER_PORT: 8070
       JAVA_TOOL_OPTIONS: -Deureka.client.serviceUrl.defaultZone=http://service-registry:8761/eureka/
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/profiledb?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: root
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
-      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
-      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
-      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
       EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE: http://service-registry:8761/eureka/
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
     ports:
