@@ -6,6 +6,10 @@ import com.microservice.profile_service.entity.UserProfile;
 import com.microservice.profile_service.repository.QuizHistoryRepository;
 import com.microservice.profile_service.repository.UserProfileRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -23,6 +27,7 @@ public class ProfileService {
     private final QuizHistoryRepository quizHistoryRepository;
 
     // Lazy profile creation — profile is created on first access
+    @Cacheable(value = "profile", key = "#userId")
     public ResponseEntity<ProfileResponse> getOrCreateProfile(UUID userId, String email) {
         UserProfile profile = userProfileRepository.findById(userId)
                 .orElseGet(() -> createDefaultProfile(userId, email));
@@ -30,6 +35,7 @@ public class ProfileService {
         return ResponseEntity.ok(toProfileResponse(profile));
     }
 
+    @CachePut(value = "profile", key = "#userId")
     public ResponseEntity<ProfileResponse> updateProfile(UUID userId, String email, UpdateProfileRequest request) {
         UserProfile profile = userProfileRepository.findById(userId)
                 .orElseGet(() -> createDefaultProfile(userId, email));
@@ -50,6 +56,7 @@ public class ProfileService {
         return ResponseEntity.ok(toProfileResponse(profile));
     }
 
+    @Cacheable(value = "quizHistory", key = "#userId")
     public ResponseEntity<List<QuizHistoryResponse>> getHistory(UUID userId) {
         List<QuizHistory> history = quizHistoryRepository
                 .findByUserIdOrderByAttemptedAtDesc(userId);
@@ -61,6 +68,9 @@ public class ProfileService {
         return ResponseEntity.ok(response);
     }
 
+    @Caching(evict = {
+            @CacheEvict(value = "quizHistory", key = "'uuid-' + #event.userId")
+    })
     public ResponseEntity<Void> recordQuizResult(QuizResultEvent event) {
         QuizHistory history = QuizHistory.builder()
                 .userId(UUID.fromString(event.getUserId()))

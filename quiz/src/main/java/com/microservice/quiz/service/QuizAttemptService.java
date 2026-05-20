@@ -10,6 +10,9 @@ import com.microservice.quiz.model.SubmissionMethod;
 import com.microservice.quiz.repository.QuizAttemptRepository;
 import com.microservice.quiz.repository.QuizRepo;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
@@ -141,6 +144,10 @@ public class QuizAttemptService {
     }
 
     //SUBMIT
+    @Caching(evict = {
+            @CacheEvict(value = "attemptResult", key = "#request.attemptId"),
+            @CacheEvict(value = "studentAttempts", key = "#studentId")
+    })
     public ResponseEntity<?> submitQuiz(int quizId, UUID studentId, SubmitRequest request) {
 
         QuizAttempt attempt = findAttemptForRequest(quizId, studentId, request.getAttemptId());
@@ -272,6 +279,7 @@ public class QuizAttemptService {
         }
     }
 
+    @Cacheable(value = "attemptResult", key = "#attemptId")
     public ResponseEntity<AttemptResultResponse> getAttemptResult(UUID attemptId) {
         return attemptRepository.findById(attemptId)
                 .filter(this::isFinalAttempt)
@@ -279,6 +287,7 @@ public class QuizAttemptService {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    @Cacheable(value = "studentAttempts", key = "#studentId")
     public ResponseEntity<List<AttemptResultResponse>> getStudentAttemptResults(UUID studentId) {
         List<AttemptResultResponse> attempts = attemptRepository
                 .findByStudentIdAndStateInOrderBySubmittedAtDesc(

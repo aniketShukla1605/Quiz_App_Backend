@@ -8,6 +8,9 @@ import com.microservice.result_service.entity.ResultHistory;
 import com.microservice.result_service.feign.QuizAttemptClient;
 import com.microservice.result_service.repository.ResultHistoryRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -26,11 +29,17 @@ public class ResultService {
     private final ResultHistoryRepository resultHistoryRepository;
     private final QuizAttemptClient quizAttemptClient;
 
+    @Caching(evict = {
+            @CacheEvict(value = "resultHistory", key = "#request.studentId"),
+            @CacheEvict(value = "scoreSummary", key = "#request.studentId"),
+            @CacheEvict(value = "attemptResult", key = "#request.attemptId")
+    })
     public ResponseEntity<Void> recordResult(RecordResultRequest request) {
         upsertResult(request);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
+    @Cacheable(value = "resultHistory", key = "#studentId")
     public ResponseEntity<List<ResultHistoryResponse>> getMyHistory(UUID studentId) {
         syncResultsFromQuiz(studentId);
 
@@ -43,6 +52,7 @@ public class ResultService {
         return ResponseEntity.ok(history);
     }
 
+    @Cacheable(value = "attemptResult", key = "#attemptId")
     public ResponseEntity<ResultHistoryResponse> getAttemptResult(UUID attemptId, UUID studentId) {
         ResultHistory result = resultHistoryRepository.findByAttemptId(attemptId)
                 .orElseGet(() -> fetchAndStoreAttempt(attemptId));
@@ -54,6 +64,7 @@ public class ResultService {
         return ResponseEntity.ok(toHistoryResponse(result));
     }
 
+    @Cacheable(value = "scoreSummary", key = "#studentId")
     public ResponseEntity<ScoreSummaryResponse> getScoreSummary(UUID studentId) {
         syncResultsFromQuiz(studentId);
 
@@ -179,6 +190,7 @@ public class ResultService {
         return Math.round(value * 100.0) / 100.0;
     }
 
+    @Cacheable(value = "leaderboard", key = "#quizId + '-' + #limit")
     public ResponseEntity<List<LeaderboardEntryResponse>> getQuizLeaderboard(Integer quizId, int limit) {
         int safeLimit = Math.max(1, Math.min(limit, 100));
 

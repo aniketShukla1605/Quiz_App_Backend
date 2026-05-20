@@ -8,6 +8,9 @@ import com.microservice.question.feign.QuizServiceClient;
 import com.microservice.question.model.Question;
 import com.microservice.question.repository.QuestionRepo;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -22,6 +25,7 @@ public class QuestionService {
     private QuestionRepo questionRepo;
 
     //All Questions
+    @Cacheable(value = "allQuestions")
     public ResponseEntity<List<Question>> getAllQuestions() {
         try {
             return new ResponseEntity<>(questionRepo.findAll(), HttpStatus.OK);
@@ -31,6 +35,7 @@ public class QuestionService {
     }
 
     //Specific Category of Questions
+    @Cacheable(value = "questionsByCategory", key = "#category")
     public ResponseEntity<List<Question>> getQuestionsByCategory(String category) {
         try {
             return new ResponseEntity<>(questionRepo.findByCategory(category), HttpStatus.OK);
@@ -40,16 +45,23 @@ public class QuestionService {
     }
 
     //Add a question
+    @Caching(evict = {
+            @CacheEvict(value = "allQuestions", allEntries = true),
+            @CacheEvict(value = "questionsByCategory", key = "#question.category"),
+            @CacheEvict(value = "generatedQuestions", allEntries = true)
+    })
     public String addQuestion(Question question) {
         questionRepo.save(question);
         return "Question added successfully";
     }
 
+    @Cacheable(value = "generatedQuestions", key = "#category + '-' + #numberOfQuestions")
     public ResponseEntity<List<Integer>> generateQuestions(String category, int numberOfQuestions) {
         List<Integer> questions = questionRepo.findRandomQuestionsByCategory(category,numberOfQuestions);
         return new ResponseEntity<>(questions, HttpStatus.OK);
     }
 
+    @Cacheable(value = "questionsFromId", key = "#ids.toString()")
     public ResponseEntity<List<QuestionDto>> getQuestionsFromId(List<Integer> ids) {
         List<QuestionDto> questionDTOS = new ArrayList<>();
         List<Question> questions = new ArrayList<>();
@@ -72,6 +84,7 @@ public class QuestionService {
         return new ResponseEntity<>(questionDTOS, HttpStatus.OK);
     }
 
+    //score depends on user answer so it is not cacheable
     public ResponseEntity<Integer> getScore(List<Response> responses) {
         int correct = 0;
 
@@ -87,6 +100,12 @@ public class QuestionService {
     @Autowired
     private QuizServiceClient quizServiceClient;
 
+    @Caching(evict = {
+            @CacheEvict(value = "allQuestions", allEntries = true),
+            @CacheEvict(value = "questionsByCategory", key = "#request.category"),
+            @CacheEvict(value = "generatedQuestions", allEntries = true),
+            @CacheEvict(value = "questionsFromId", allEntries = true)
+    })
     public ResponseEntity<String> createQuizWithQuestions(CreateQuizWithQuestionsDto request) {
         try {
             //Validate that all questions belong to the stated category

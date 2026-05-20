@@ -9,6 +9,9 @@ import com.microservice.quiz.feign.QuizInterface;
 import com.microservice.quiz.model.Quiz;
 import com.microservice.quiz.repository.QuizRepo;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -25,6 +28,10 @@ public class QuizService {
     private ProfileInterface profileInterface;
 
     //To create a random Quiz
+    @Caching(evict = {
+            @CacheEvict(value = "quizQuestions", allEntries = true),
+            @CacheEvict(value = "generatedQuestions", allEntries = true)
+    })
     public ResponseEntity<String> createQuiz(String category, int numOfQ, String title, Integer duration) {
 
         List<Integer> questions = quizInterface.generateQuestions(category, numOfQ).getBody();
@@ -41,6 +48,7 @@ public class QuizService {
     }
 
     //Method to get all the questions of a quiz
+    @Cacheable(value = "quizQuestions", key = "#id")
     public ResponseEntity<List<QuestionDto>> getQuizQuestions(int id) {
         Quiz quiz = quizRepo.findById(id).orElseThrow(()-> new RuntimeException("Quiz id " + id + " not found"));
         List<Integer> questionId = quiz.getQuestionId();
@@ -48,6 +56,10 @@ public class QuizService {
         return questions;
     }
 
+    @Caching(evict = {
+            @CacheEvict(value = "quizQuestions", allEntries = true),
+            @CacheEvict(value = "questionsFromId", allEntries = true)
+    })
     public ResponseEntity<String> createCustomQuiz(CustomQuizDto dto) {
         Quiz quiz = new Quiz();
         quiz.setTitle(dto.getTitle());

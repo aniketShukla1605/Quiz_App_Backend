@@ -27,12 +27,10 @@ public class CacheConfig {
 
         return RedisCacheManager.builder(factory)
                 .cacheDefaults(config)
-                .withCacheConfiguration("quiz",
-                        config.entryTtl(Duration.ofMinutes(30)))   // quizzes change rarely
-                .withCacheConfiguration("questions",
-                        config.entryTtl(Duration.ofMinutes(30)))
-                .withCacheConfiguration("resultHistory",
-                        config.entryTtl(Duration.ofMinutes(5)))    // shorter TTL, changes after each attempt
+                .withCacheConfiguration("allQuestions",        config.entryTtl(Duration.ofMinutes(30)))
+                .withCacheConfiguration("questionsByCategory", config.entryTtl(Duration.ofMinutes(30)))
+                .withCacheConfiguration("generatedQuestions",  config.entryTtl(Duration.ofMinutes(10)))
+                .withCacheConfiguration("questionsFromId",     config.entryTtl(Duration.ofMinutes(30)))
                 .build();
     }
 }
