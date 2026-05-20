@@ -152,7 +152,6 @@ Service	Port
 ## 🔮 Future Enhancements
 - Frontend Integration
 - Kafka for communication
-- Leaderboard
 - Timer-based quizzes using websocket
 
 ## 👨‍💻 Author
