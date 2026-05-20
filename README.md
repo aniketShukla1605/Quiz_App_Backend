@@ -147,6 +147,7 @@ Service	Port
 - Scalable backend design
 - User Profile
 - Result History
+- fast Caching using Redis
 
 ## 🔮 Future Enhancements
 - Frontend Integration
