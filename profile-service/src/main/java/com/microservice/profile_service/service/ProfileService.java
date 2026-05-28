@@ -26,12 +26,10 @@ public class ProfileService {
     private final UserProfileRepository userProfileRepository;
     private final QuizHistoryRepository quizHistoryRepository;
 
-    // Lazy profile creation — profile is created on first access
     @Cacheable(value = "profile", key = "#userId")
     public ResponseEntity<ProfileResponse> getOrCreateProfile(UUID userId, String email) {
         UserProfile profile = userProfileRepository.findById(userId)
                 .orElseGet(() -> createDefaultProfile(userId, email));
-
         return ResponseEntity.ok(toProfileResponse(profile));
     }
 
@@ -40,31 +38,21 @@ public class ProfileService {
         UserProfile profile = userProfileRepository.findById(userId)
                 .orElseGet(() -> createDefaultProfile(userId, email));
 
-        if (request.getDisplayName() != null) {
-            profile.setDisplayName(request.getDisplayName());
-        }
-        if (request.getAvatarUrl() != null) {
-            profile.setAvatarUrl(request.getAvatarUrl());
-        }
-        if (request.getBio() != null) {
-            profile.setBio(request.getBio());
-        }
+        if (request.getDisplayName() != null) profile.setDisplayName(request.getDisplayName());
+        if (request.getAvatarUrl() != null)   profile.setAvatarUrl(request.getAvatarUrl());
+        if (request.getBio() != null)          profile.setBio(request.getBio());
 
         profile.setUpdatedAt(LocalDateTime.now());
         userProfileRepository.save(profile);
-
         return ResponseEntity.ok(toProfileResponse(profile));
     }
 
     @Cacheable(value = "quizHistory", key = "#userId")
     public ResponseEntity<List<QuizHistoryResponse>> getHistory(UUID userId) {
-        List<QuizHistory> history = quizHistoryRepository
-                .findByUserIdOrderByAttemptedAtDesc(userId);
-
+        List<QuizHistory> history = quizHistoryRepository.findByUserIdOrderByAttemptedAtDesc(userId);
         List<QuizHistoryResponse> response = history.stream()
                 .map(this::toHistoryResponse)
                 .collect(Collectors.toList());
-
         return ResponseEntity.ok(response);
     }
 
@@ -79,12 +67,28 @@ public class ProfileService {
                 .totalQuestions(event.getTotalQuestions())
                 .attemptedAt(LocalDateTime.now())
                 .build();
-
         quizHistoryRepository.save(history);
         return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
-    //helpers
+    /**
+     * Bulk lookup of display names for a list of user IDs.
+     * Used internally by result-service for leaderboard rendering.
+     */
+    public ResponseEntity<List<UserDisplayNameResponse>> getDisplayNames(List<UUID> userIds) {
+        List<UserDisplayNameResponse> names = userIds.stream()
+                .map(userId -> {
+                    String name = userProfileRepository.findById(userId)
+                            .map(UserProfile::getDisplayName)
+                            .orElse("Unknown");
+                    return new UserDisplayNameResponse(userId, name);
+                })
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(names);
+    }
+
+    // --- helpers ---
+
     private UserProfile createDefaultProfile(UUID userId, String email) {
         String defaultName = email != null && email.contains("@")
                 ? email.substring(0, email.indexOf("@"))

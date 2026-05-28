@@ -16,7 +16,6 @@ import org.springframework.web.bind.annotation.RestController;
 import com.microservice.result_service.dto.LeaderboardEntryResponse;
 import org.springframework.web.bind.annotation.RequestParam;
 
-
 import java.util.List;
 import java.util.UUID;
 
@@ -54,11 +53,11 @@ public class ResultController {
         return resultService.recordResult(request);
     }
 
-    //move this controller in its own leaderboard controller later
-    @GetMapping("/quiz/{quizId}/leaderboard")
+    // Search leaderboard by quiz title
+    @GetMapping("/quiz/leaderboard")
     public ResponseEntity<List<LeaderboardEntryResponse>> getQuizLeaderboard(
-            @PathVariable Integer quizId,
+            @RequestParam String title,
             @RequestParam(defaultValue = "10") int limit) {
-        return resultService.getQuizLeaderboard(quizId, limit);
+        return resultService.getQuizLeaderboard(title, limit);
     }
 }

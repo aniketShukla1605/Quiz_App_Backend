@@ -10,9 +10,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import java.util.List;
 import java.util.UUID;
 
-@FeignClient(name = "quiz")
+@FeignClient(name = "quiz", contextId = "quizAttemptClient")
 public interface QuizAttemptClient {
-    //methods from quiz service
 
     @GetMapping("/quiz/internal/attempts/{attemptId}")
     ResponseEntity<QuizAttemptResultResponse> getAttemptResult(@PathVariable UUID attemptId);

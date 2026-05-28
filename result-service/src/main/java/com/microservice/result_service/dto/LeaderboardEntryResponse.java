@@ -6,7 +6,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 @Data
 @Builder
@@ -14,7 +13,7 @@ import java.util.UUID;
 @NoArgsConstructor
 public class LeaderboardEntryResponse {
     private int rank;
-    private UUID studentId;
+    private String displayName;
     private Integer score;
     private Integer maxScore;
     private Double percentage;
