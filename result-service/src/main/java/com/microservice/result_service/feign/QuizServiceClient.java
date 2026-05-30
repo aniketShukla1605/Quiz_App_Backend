@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
 
-@FeignClient(name = "quiz")
+@FeignClient(name = "quiz", contextId = "quizServiceClient")
 public interface QuizServiceClient {
 
     @GetMapping("/quiz/internal/search")
