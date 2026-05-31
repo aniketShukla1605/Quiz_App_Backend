@@ -20,6 +20,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -42,13 +43,12 @@ public class ResultService {
             @CacheEvict(value = "scoreSummary", key = "#request.studentId"),
             @CacheEvict(value = "attemptResult", key = "#request.attemptId")
     })
-    public ResponseEntity<Void> recordResult(RecordResultRequest request) {
+    public void recordResult(RecordResultRequest request) {
         upsertResult(request);
-        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
     @Cacheable(value = "resultHistory", key = "#studentId")
-    public ResponseEntity<List<ResultHistoryResponse>> getMyHistory(UUID studentId) {
+    public List<ResultHistoryResponse> getMyHistory(UUID studentId) {
         syncResultsFromQuiz(studentId);
 
         List<ResultHistoryResponse> history = resultHistoryRepository
@@ -57,23 +57,23 @@ public class ResultService {
                 .map(this::toHistoryResponse)
                 .toList();
 
-        return ResponseEntity.ok(history);
+        return history;
     }
 
     @Cacheable(value = "attemptResult", key = "#attemptId")
-    public ResponseEntity<ResultHistoryResponse> getAttemptResult(UUID attemptId, UUID studentId) {
+    public ResultHistoryResponse getAttemptResult(UUID attemptId, UUID studentId) {
         ResultHistory result = resultHistoryRepository.findByAttemptId(attemptId)
                 .orElseGet(() -> fetchAndStoreAttempt(attemptId));
 
         if (result == null || !result.getStudentId().equals(studentId)) {
-            return ResponseEntity.notFound().build();
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Result not found");
         }
 
-        return ResponseEntity.ok(toHistoryResponse(result));
+        return toHistoryResponse(result);
     }
 
     @Cacheable(value = "scoreSummary", key = "#studentId")
-    public ResponseEntity<ScoreSummaryResponse> getScoreSummary(UUID studentId) {
+    public ScoreSummaryResponse getScoreSummary(UUID studentId) {
         syncResultsFromQuiz(studentId);
 
         List<ResultHistory> results = resultHistoryRepository.findByStudentIdOrderBySubmittedAtDesc(studentId);
@@ -93,17 +93,17 @@ public class ResultService {
                 .max(Double::compareTo)
                 .orElse(0.0);
 
-        return ResponseEntity.ok(ScoreSummaryResponse.builder()
+        return ScoreSummaryResponse.builder()
                 .quizzesAttempted(results.size())
                 .totalScore(totalScore)
                 .totalMaxScore(totalMaxScore)
                 .averagePercentage(round(averagePercentage))
                 .bestScore(bestScore)
                 .bestPercentage(round(bestPercentage))
-                .build());
+                .build();
     }
 
-    public ResponseEntity<List<ResultHistoryResponse>> syncMyResults(UUID studentId) {
+    public List<ResultHistoryResponse> syncMyResults(UUID studentId) {
         syncResultsFromQuiz(studentId);
         return getMyHistory(studentId);
     }
@@ -112,11 +112,11 @@ public class ResultService {
      * Look up quiz by title, then build a ranked leaderboard with display names.
      */
     @Cacheable(value = "leaderboard", key = "#title + '-' + #limit")
-    public ResponseEntity<List<LeaderboardEntryResponse>> getQuizLeaderboard(String title, int limit) {
+    public List<LeaderboardEntryResponse> getQuizLeaderboard(String title, int limit) {
         // 1. Resolve title → quizId
         Integer quizId = resolveQuizIdByTitle(title);
         if (quizId == null) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+            throw new  ResponseStatusException(HttpStatus.NOT_FOUND, "Quiz not found");
         }
 
         // 2. Fetch top results for that quiz
@@ -125,7 +125,7 @@ public class ResultService {
                 .findByQuizIdOrderByScoreDescSubmittedAtAsc(quizId, PageRequest.of(0, safeLimit));
 
         if (results.isEmpty()) {
-            return ResponseEntity.ok(List.of());
+            return List.of();
         }
 
         // 3. Batch-resolve studentIds → displayNames
@@ -153,7 +153,7 @@ public class ResultService {
                     .build());
         }
 
-        return ResponseEntity.ok(leaderboard);
+        return leaderboard;
     }
 
     // --- private helpers ---

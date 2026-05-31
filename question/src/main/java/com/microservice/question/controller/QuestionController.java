@@ -21,13 +21,13 @@ public class QuestionController {
     //All Questions
     @GetMapping("/allQuestions")
     public ResponseEntity<List<Question>> allQuestions() {
-        return questionService.getAllQuestions();
+        return ResponseEntity.ok(questionService.getAllQuestions());
     }
 
     //Only for Specific category
     @GetMapping("/category/{category}")
     public ResponseEntity<List<Question>> getQuestionsByCategory(@PathVariable String category) {
-        return questionService.getQuestionsByCategory(category);
+        return ResponseEntity.ok(questionService.getQuestionsByCategory(category));
     }
 
     //Add a Question
@@ -39,7 +39,7 @@ public class QuestionController {
     //Generate Quiz
     @GetMapping("/generate")
     public ResponseEntity<List<Integer>> generateQuestions(@RequestParam String category, @RequestParam int numberOfQuestions) {
-        return questionService.generateQuestions(category,numberOfQuestions);
+        return ResponseEntity.ok(questionService.generateQuestions(category,numberOfQuestions));
     }
 
     //Create Custom Quiz
@@ -52,12 +52,12 @@ public class QuestionController {
     //Get Questions
     @PostMapping("/getQuestions")
     public ResponseEntity<List<QuestionDto>> getQuestionsFromId(@RequestBody List<Integer> ids) {
-        return questionService.getQuestionsFromId(ids);
+        return ResponseEntity.ok(questionService.getQuestionsFromId(ids));
     }
 
     //Get Score
     @PostMapping("getScore")
     public ResponseEntity<Integer> getScore(@RequestBody List<Response> responses) {
-        return questionService.getScore(responses);
+        return ResponseEntity.ok(questionService.getScore(responses));
     }
 }

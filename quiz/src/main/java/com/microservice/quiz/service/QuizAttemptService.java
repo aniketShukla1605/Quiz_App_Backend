@@ -131,7 +131,7 @@ public class QuizAttemptService {
         //check if time is up
         LocalDateTime now = LocalDateTime.now();
         if (!now.isBefore(attempt.getExpiryTime())) {
-            return autoSubmit(attempt);
+            return ResponseEntity.ok(autoSubmit(attempt));
         }
 
         attemptRepository.save(attempt);
@@ -148,18 +148,17 @@ public class QuizAttemptService {
             @CacheEvict(value = "attemptResult", key = "#request.attemptId"),
             @CacheEvict(value = "studentAttempts", key = "#studentId")
     })
-    public ResponseEntity<?> submitQuiz(int quizId, UUID studentId, SubmitRequest request) {
+    public SubmitResponse submitQuiz(int quizId, UUID studentId, SubmitRequest request) {
 
         QuizAttempt attempt = findAttemptForRequest(quizId, studentId, request.getAttemptId());
 
         if (attempt == null) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Attempt not found");
+            throw new RuntimeException("Attempt not found");
         }
 
         //already submitted
         if (attempt.getState() == AttemptState.GRADED || attempt.getState() == AttemptState.SUBMITTED) {
-            return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body(SubmitResponse.builder()
+            return SubmitResponse.builder()
                             .attemptId(attempt.getAttemptId())
                             .quizId(attempt.getQuizId())
                             .state(attempt.getState().name())
@@ -167,11 +166,11 @@ public class QuizAttemptService {
                             .maxScore(attempt.getMaxScore())
                             .submittedAt(attempt.getSubmittedAt())
                             .submissionMethod(attempt.getSubmissionMethod().name())
-                            .build());
+                            .build();
         }
 
         if (attempt.getState() != AttemptState.IN_PROGRESS) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Quiz is not in progress");
+            throw new  RuntimeException("Quiz already submitted at " + attempt.getSubmittedAt());
         }
 
         try {
@@ -203,7 +202,7 @@ public class QuizAttemptService {
             attemptRepository.save(attempt);
             publishResult(attempt);
 
-            return ResponseEntity.ok(SubmitResponse.builder()
+            return SubmitResponse.builder()
                     .attemptId(attempt.getAttemptId())
                     .quizId(attempt.getQuizId())
                     .state(attempt.getState().name())
@@ -211,14 +210,13 @@ public class QuizAttemptService {
                     .maxScore(maxScore)
                     .submittedAt(now)
                     .submissionMethod(method.name())
-                    .build());
+                    .build();
 
         } catch (ObjectOptimisticLockingFailureException e) {
             //return existing result
             QuizAttempt updated = attemptRepository.findFirstByQuizIdAndStudentIdOrderByStartTimeDesc(quizId, studentId)
                     .orElseThrow();
-            return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body(SubmitResponse.builder()
+            return SubmitResponse.builder()
                             .attemptId(updated.getAttemptId())
                             .quizId(updated.getQuizId())
                             .state(updated.getState().name())
@@ -226,12 +224,12 @@ public class QuizAttemptService {
                             .maxScore(updated.getMaxScore())
                             .submittedAt(updated.getSubmittedAt())
                             .submissionMethod(updated.getSubmissionMethod().name())
-                            .build());
+                            .build();
         }
     }
 
     //AUTO SUBMIT
-    private ResponseEntity<?> autoSubmit(QuizAttempt attempt) {
+    private SyncResponse autoSubmit(QuizAttempt attempt) {
         try {
             List<Response> responses = attempt.getAnswers() == null ? List.of() : attempt.getAnswers().stream()
                     .map(a -> new Response(a.getQuestionId(), a.getAnswer()))
@@ -253,7 +251,7 @@ public class QuizAttemptService {
             attemptRepository.save(attempt);
             publishResult(attempt);
 
-            return ResponseEntity.ok(SyncResponse.builder()
+            return SyncResponse.builder()
                     .serverTime(now)
                     .expiryTime(attempt.getExpiryTime())
                     .submissionStatus(AttemptState.GRADED.name())
@@ -261,13 +259,13 @@ public class QuizAttemptService {
                     .maxScore(maxScore)
                     .submittedAt(now)
                     .submissionMethod(SubmissionMethod.AUTO.name())
-                    .build());
+                    .build();
 
         } catch (ObjectOptimisticLockingFailureException e) {
             QuizAttempt updated = attemptRepository
                     .findFirstByQuizIdAndStudentIdOrderByStartTimeDesc(attempt.getQuizId(), attempt.getStudentId())
                     .orElseThrow();
-            return ResponseEntity.ok(SyncResponse.builder()
+            return SyncResponse.builder()
                     .serverTime(LocalDateTime.now())
                     .expiryTime(updated.getExpiryTime())
                     .submissionStatus(updated.getState().name())
@@ -275,20 +273,20 @@ public class QuizAttemptService {
                     .maxScore(updated.getMaxScore())
                     .submittedAt(updated.getSubmittedAt())
                     .submissionMethod(updated.getSubmissionMethod().name())
-                    .build());
+                    .build();
         }
     }
 
     @Cacheable(value = "attemptResult", key = "#attemptId")
-    public ResponseEntity<AttemptResultResponse> getAttemptResult(UUID attemptId) {
+    public AttemptResultResponse getAttemptResult(UUID attemptId) {
         return attemptRepository.findById(attemptId)
                 .filter(this::isFinalAttempt)
-                .map(attempt -> ResponseEntity.ok(toAttemptResultResponse(attempt)))
-                .orElse(ResponseEntity.notFound().build());
+                .map(attempt -> toAttemptResultResponse(attempt))
+                .orElseThrow();
     }
 
     @Cacheable(value = "studentAttempts", key = "#studentId")
-    public ResponseEntity<List<AttemptResultResponse>> getStudentAttemptResults(UUID studentId) {
+    public List<AttemptResultResponse> getStudentAttemptResults(UUID studentId) {
         List<AttemptResultResponse> attempts = attemptRepository
                 .findByStudentIdAndStateInOrderBySubmittedAtDesc(
                         studentId,
@@ -298,7 +296,7 @@ public class QuizAttemptService {
                 .map(this::toAttemptResultResponse)
                 .toList();
 
-        return ResponseEntity.ok(attempts);
+        return attempts;
     }
 
     private void publishResult(QuizAttempt attempt) {

@@ -4,6 +4,7 @@ import com.microservice.profile_service.dto.*;
 import com.microservice.profile_service.service.CloudinaryService;
 import com.microservice.profile_service.service.ProfileService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -26,7 +27,7 @@ public class ProfileController {
     public ResponseEntity<ProfileResponse> getMyProfile(
             @RequestHeader("X-User-Id") String userId,
             @RequestHeader("X-User-Email") String email) {
-        return profileService.getOrCreateProfile(UUID.fromString(userId), email);
+        return ResponseEntity.ok(profileService.getOrCreateProfile(UUID.fromString(userId), email));
     }
 
     @PutMapping("/me")
@@ -34,13 +35,13 @@ public class ProfileController {
             @RequestHeader("X-User-Id") String userId,
             @RequestHeader("X-User-Email") String email,
             @RequestBody UpdateProfileRequest request) {
-        return profileService.updateProfile(UUID.fromString(userId), email, request);
+        return ResponseEntity.ok(profileService.updateProfile(UUID.fromString(userId), email, request));
     }
 
     @GetMapping("/me/history")
     public ResponseEntity<List<QuizHistoryResponse>> getMyHistory(
             @RequestHeader("X-User-Id") String userId) {
-        return profileService.getHistory(UUID.fromString(userId));
+        return ResponseEntity.ok(profileService.getHistory(UUID.fromString(userId)));
     }
 
     @PostMapping("/me/avatar")
@@ -63,7 +64,7 @@ public class ProfileController {
         UpdateProfileRequest request = new UpdateProfileRequest();
         request.setAvatarUrl(avatarUrl);
 
-        return profileService.updateProfile(UUID.fromString(userId), email, request);
+        return ResponseEntity.ok(profileService.updateProfile(UUID.fromString(userId), email, request));
     }
 
     @DeleteMapping("/me/avatar")
@@ -76,17 +77,18 @@ public class ProfileController {
         UpdateProfileRequest request = new UpdateProfileRequest();
         request.setAvatarUrl(DEFAULT_AVATAR);
 
-        return profileService.updateProfile(
+        return ResponseEntity.ok(profileService.updateProfile(
                 UUID.fromString(userId),
                 email,
                 request
-        );
+        ));
     }
 
     // Internal endpoint
     @PostMapping("/internal/history")
     public ResponseEntity<Void> recordQuizResult(
             @RequestBody QuizResultEvent event) {
-        return profileService.recordQuizResult(event);
+        profileService.recordQuizResult(event);
+        return new ResponseEntity<>(HttpStatus.CREATED);
     }
 }

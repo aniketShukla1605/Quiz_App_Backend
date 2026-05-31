@@ -23,11 +23,11 @@ public class QuizAttemptInternalController {
 
     @GetMapping("/{attemptId}")
     public ResponseEntity<AttemptResultResponse> getAttemptResult(@PathVariable UUID attemptId) {
-        return attemptService.getAttemptResult(attemptId);
+        return ResponseEntity.ok(attemptService.getAttemptResult(attemptId));
     }
 
     @GetMapping
     public ResponseEntity<List<AttemptResultResponse>> getStudentAttemptResults(@RequestParam UUID studentId) {
-        return attemptService.getStudentAttemptResults(studentId);
+        return ResponseEntity.ok(attemptService.getStudentAttemptResults(studentId));
     }
 }

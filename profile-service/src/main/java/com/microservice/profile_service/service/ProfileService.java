@@ -10,7 +10,6 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
@@ -27,14 +26,14 @@ public class ProfileService {
     private final QuizHistoryRepository quizHistoryRepository;
 
     @Cacheable(value = "profile", key = "#userId")
-    public ResponseEntity<ProfileResponse> getOrCreateProfile(UUID userId, String email) {
+    public ProfileResponse getOrCreateProfile(UUID userId, String email) {
         UserProfile profile = userProfileRepository.findById(userId)
                 .orElseGet(() -> createDefaultProfile(userId, email));
-        return ResponseEntity.ok(toProfileResponse(profile));
+        return toProfileResponse(profile);
     }
 
     @CachePut(value = "profile", key = "#userId")
-    public ResponseEntity<ProfileResponse> updateProfile(UUID userId, String email, UpdateProfileRequest request) {
+    public ProfileResponse updateProfile(UUID userId, String email, UpdateProfileRequest request) {
         UserProfile profile = userProfileRepository.findById(userId)
                 .orElseGet(() -> createDefaultProfile(userId, email));
 
@@ -44,22 +43,22 @@ public class ProfileService {
 
         profile.setUpdatedAt(LocalDateTime.now());
         userProfileRepository.save(profile);
-        return ResponseEntity.ok(toProfileResponse(profile));
+        return toProfileResponse(profile);
     }
 
     @Cacheable(value = "quizHistory", key = "#userId")
-    public ResponseEntity<List<QuizHistoryResponse>> getHistory(UUID userId) {
+    public List<QuizHistoryResponse> getHistory(UUID userId) {
         List<QuizHistory> history = quizHistoryRepository.findByUserIdOrderByAttemptedAtDesc(userId);
         List<QuizHistoryResponse> response = history.stream()
                 .map(this::toHistoryResponse)
                 .collect(Collectors.toList());
-        return ResponseEntity.ok(response);
+        return response;
     }
 
     @Caching(evict = {
             @CacheEvict(value = "quizHistory", key = "'uuid-' + #event.userId")
     })
-    public ResponseEntity<Void> recordQuizResult(QuizResultEvent event) {
+    public void recordQuizResult(QuizResultEvent event) {
         QuizHistory history = QuizHistory.builder()
                 .userId(UUID.fromString(event.getUserId()))
                 .quizId(event.getQuizId())
@@ -68,13 +67,8 @@ public class ProfileService {
                 .attemptedAt(LocalDateTime.now())
                 .build();
         quizHistoryRepository.save(history);
-        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 
-    /**
-     * Bulk lookup of display names for a list of user IDs.
-     * Used internally by result-service for leaderboard rendering.
-     */
     public ResponseEntity<List<UserDisplayNameResponse>> getDisplayNames(List<UUID> userIds) {
         List<UserDisplayNameResponse> names = userIds.stream()
                 .map(userId -> {

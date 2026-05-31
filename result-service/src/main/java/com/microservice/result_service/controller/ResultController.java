@@ -5,6 +5,7 @@ import com.microservice.result_service.dto.ResultHistoryResponse;
 import com.microservice.result_service.dto.ScoreSummaryResponse;
 import com.microservice.result_service.service.ResultService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -28,29 +29,30 @@ public class ResultController {
 
     @GetMapping("/me/history")
     public ResponseEntity<List<ResultHistoryResponse>> getMyHistory(@RequestHeader("X-User-Id") UUID studentId) {
-        return resultService.getMyHistory(studentId);
+        return ResponseEntity.ok(resultService.getMyHistory(studentId));
     }
 
     @GetMapping("/me/summary")
     public ResponseEntity<ScoreSummaryResponse> getMyScoreSummary(@RequestHeader("X-User-Id") UUID studentId) {
-        return resultService.getScoreSummary(studentId);
+        return ResponseEntity.ok(resultService.getScoreSummary(studentId));
     }
 
     @PostMapping("/me/sync")
     public ResponseEntity<List<ResultHistoryResponse>> syncMyResults(@RequestHeader("X-User-Id") UUID studentId) {
-        return resultService.syncMyResults(studentId);
+        return ResponseEntity.ok(resultService.syncMyResults(studentId));
     }
 
     @GetMapping("/attempt/{attemptId}")
     public ResponseEntity<ResultHistoryResponse> getAttemptResult(
             @PathVariable UUID attemptId,
             @RequestHeader("X-User-Id") UUID studentId) {
-        return resultService.getAttemptResult(attemptId, studentId);
+        return ResponseEntity.ok(resultService.getAttemptResult(attemptId, studentId));
     }
 
     @PostMapping("/internal/record")
     public ResponseEntity<Void> recordResult(@RequestBody RecordResultRequest request) {
-        return resultService.recordResult(request);
+        resultService.recordResult(request);
+        return ResponseEntity.ok().build();
     }
 
     // Search leaderboard by quiz title
@@ -58,6 +60,6 @@ public class ResultController {
     public ResponseEntity<List<LeaderboardEntryResponse>> getQuizLeaderboard(
             @RequestParam String title,
             @RequestParam(defaultValue = "10") int limit) {
-        return resultService.getQuizLeaderboard(title, limit);
+        return ResponseEntity.ok(resultService.getQuizLeaderboard(title, limit));
     }
 }

@@ -31,7 +31,7 @@ public class QuizAttemptController {
             @PathVariable int id,
             @RequestHeader("X-User-Id") UUID studentId,
             @RequestBody SyncRequest request) {
-        return attemptService.syncQuiz(id, studentId, request);
+        return ResponseEntity.ok(attemptService.syncQuiz(id, studentId, request));
     }
 
     //submit
@@ -40,6 +40,6 @@ public class QuizAttemptController {
             @PathVariable int id,
             @RequestHeader("X-User-Id") UUID studentId,
             @RequestBody SubmitRequest request) {
-        return attemptService.submitQuiz(id, studentId, request);
+        return ResponseEntity.ok(attemptService.submitQuiz(id, studentId, request));
     }
 }

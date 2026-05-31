@@ -32,7 +32,7 @@ public class QuizService {
             @CacheEvict(value = "quizQuestions", allEntries = true),
             @CacheEvict(value = "generatedQuestions", allEntries = true)
     })
-    public ResponseEntity<String> createQuiz(String category, int numOfQ, String title, Integer duration) {
+    public String createQuiz(String category, int numOfQ, String title, Integer duration) {
 
         List<Integer> questions = quizInterface.generateQuestions(category, numOfQ).getBody();
         Quiz quiz = new Quiz();
@@ -44,15 +44,15 @@ public class QuizService {
 
         quizRepo.save(quiz);
 
-        return new ResponseEntity<>("Question added successfully", HttpStatus.CREATED);
+        return "Question added successfully";
     }
 
     //Method to get all the questions of a quiz
     @Cacheable(value = "quizQuestions", key = "#id")
-    public ResponseEntity<List<QuestionDto>> getQuizQuestions(int id) {
+    public List<QuestionDto> getQuizQuestions(int id) {
         Quiz quiz = quizRepo.findById(id).orElseThrow(()-> new RuntimeException("Quiz id " + id + " not found"));
         List<Integer> questionId = quiz.getQuestionId();
-        ResponseEntity<List<QuestionDto>> questions = quizInterface.getQuestionsFromId(questionId);
+        List<QuestionDto> questions = quizInterface.getQuestionsFromId(questionId).getBody();
         return questions;
     }
 
@@ -60,27 +60,27 @@ public class QuizService {
             @CacheEvict(value = "quizQuestions", allEntries = true),
             @CacheEvict(value = "questionsFromId", allEntries = true)
     })
-    public ResponseEntity<String> createCustomQuiz(CustomQuizDto dto) {
+    public String createCustomQuiz(CustomQuizDto dto) {
         Quiz quiz = new Quiz();
         quiz.setTitle(dto.getTitle());
         quiz.setCategory(dto.getCategory());
         quiz.setQuestionId(dto.getQuestionIds());
         if(dto.getDuration() != null) {quiz.setDurationMinutes(dto.getDuration());}
         quizRepo.save(quiz);
-        return new ResponseEntity<>("Custom quiz created successfully", HttpStatus.CREATED);
+        return "Custom quiz created successfully";
     }
 
     //calculate the result
     //no longer in use
-    public ResponseEntity<Integer> calculateResult(int id, List<Response> responses, String userId) {
-        ResponseEntity<Integer> correct = quizInterface.getScore(responses);
+    public Integer calculateResult(int id, List<Response> responses, String userId) {
+        Integer correct = quizInterface.getScore(responses).getBody();
 
         try {
             Quiz quiz = quizRepo.findById(id).get();
             profileInterface.recordQuizResult(new QuizResultEvent(
                     userId,
                     id,
-                    correct.getBody(),
+                    correct,
                     quiz.getQuestionId().size()
             ));
         } catch (Exception ignored) {}

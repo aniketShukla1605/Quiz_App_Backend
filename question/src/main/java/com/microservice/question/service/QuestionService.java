@@ -26,21 +26,21 @@ public class QuestionService {
 
     //All Questions
     @Cacheable(value = "allQuestions")
-    public ResponseEntity<List<Question>> getAllQuestions() {
+    public List<Question> getAllQuestions() {
         try {
-            return new ResponseEntity<>(questionRepo.findAll(), HttpStatus.OK);
+            return questionRepo.findAll();
         } catch (Exception e) {
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ArrayList<>();
         }
     }
 
     //Specific Category of Questions
     @Cacheable(value = "questionsByCategory", key = "#category")
-    public ResponseEntity<List<Question>> getQuestionsByCategory(String category) {
+    public List<Question> getQuestionsByCategory(String category) {
         try {
-            return new ResponseEntity<>(questionRepo.findByCategory(category), HttpStatus.OK);
+            return questionRepo.findByCategory(category);
         } catch (Exception e) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            return new ArrayList<>();
         }
     }
 
@@ -56,13 +56,13 @@ public class QuestionService {
     }
 
     @Cacheable(value = "generatedQuestions", key = "#category + '-' + #numberOfQuestions")
-    public ResponseEntity<List<Integer>> generateQuestions(String category, int numberOfQuestions) {
+    public List<Integer> generateQuestions(String category, int numberOfQuestions) {
         List<Integer> questions = questionRepo.findRandomQuestionsByCategory(category,numberOfQuestions);
-        return new ResponseEntity<>(questions, HttpStatus.OK);
+        return questions;
     }
 
     @Cacheable(value = "questionsFromId", key = "#ids.toString()")
-    public ResponseEntity<List<QuestionDto>> getQuestionsFromId(List<Integer> ids) {
+    public List<QuestionDto> getQuestionsFromId(List<Integer> ids) {
         List<QuestionDto> questionDTOS = new ArrayList<>();
         List<Question> questions = new ArrayList<>();
 
@@ -81,11 +81,11 @@ public class QuestionService {
             questionDTOS.add(questionDTO);
         }
 
-        return new ResponseEntity<>(questionDTOS, HttpStatus.OK);
+        return questionDTOS;
     }
 
     //score depends on user answer so it is not cacheable
-    public ResponseEntity<Integer> getScore(List<Response> responses) {
+    public Integer getScore(List<Response> responses) {
         int correct = 0;
 
         for(Response response : responses){
@@ -94,7 +94,7 @@ public class QuestionService {
                 correct ++;
             }
         }
-        return new ResponseEntity<>(correct, HttpStatus.OK);
+        return correct;
     }
 
     @Autowired
