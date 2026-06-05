@@ -285,7 +285,6 @@ public class QuizAttemptService {
                 .orElseThrow();
     }
 
-    @Cacheable(value = "studentAttempts", key = "#studentId")
     public List<AttemptResultResponse> getStudentAttemptResults(UUID studentId) {
         List<AttemptResultResponse> attempts = attemptRepository
                 .findByStudentIdAndStateInOrderBySubmittedAtDesc(

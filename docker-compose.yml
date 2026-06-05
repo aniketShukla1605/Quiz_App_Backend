@@ -234,5 +234,16 @@ services:
     ports:
       - "8762:8762"
 
+  frontend:
+    build:
+      context: ../Quiz_Application_Frontend
+      dockerfile: Dockerfile.frontend
+    container_name: quiz-frontend
+    restart: unless-stopped
+    depends_on:
+      - api-gateway
+    ports:
+      - "3000:80"
+
 volumes:
   mysql-data:
