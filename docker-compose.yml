@@ -69,8 +69,8 @@ services:
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: root
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
-      JWT_SERVICE: this_is_secret_key_of_quiz_application_1234
-      GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
+      JWT_SERVICE: ${JWT_SECRET}
+      GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID}
       GOOGLE_OAUTH_JWK_SET_URI: https://www.googleapis.com/oauth2/v3/certs
       EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE: http://service-registry:8761/eureka/
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
@@ -228,7 +228,7 @@ services:
       JAVA_TOOL_OPTIONS: -Deureka.client.serviceUrl.defaultZone=http://service-registry:8761/eureka/
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
-      JWT_SERVICE: this_is_secret_key_of_quiz_application_1234
+      JWT_SERVICE: ${JWT_SECRET}
       EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE: http://service-registry:8761/eureka/
       EUREKA_INSTANCE_PREFER_IP_ADDRESS: "true"
     ports:
@@ -238,6 +238,8 @@ services:
     build:
       context: ../Quiz_Application_Frontend
       dockerfile: Dockerfile.frontend
+      args:
+        - VITE_GOOGLE_CLIENT_ID=${GOOGLE_OAUTH_CLIENT_ID}
     container_name: quiz-frontend
     restart: unless-stopped
     depends_on:
