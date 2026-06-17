@@ -27,6 +27,10 @@ public class User {
     @Column(unique = true)
     private String googleSubject;
 
+    @Builder.Default
+    @Column(nullable = false)
+    private boolean isEmailVerified = false;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Role role;

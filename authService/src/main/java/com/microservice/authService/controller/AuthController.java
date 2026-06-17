@@ -3,7 +3,9 @@ package com.microservice.authService.controller;
 import com.microservice.authService.dto.GoogleLoginRequest;
 import com.microservice.authService.dto.LoginRequest;
 import com.microservice.authService.dto.RegisterRequest;
+import com.microservice.authService.dto.ResendVerificationRequest;
 import com.microservice.authService.service.AuthService;
+import com.microservice.authService.service.EmailVerificationService;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -17,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class AuthController {
     private final AuthService authService;
+    private final EmailVerificationService emailVerificationService;
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest registerRequest) {
@@ -32,6 +35,16 @@ public class AuthController {
     public ResponseEntity<?> googleLogin(@Valid @RequestBody GoogleLoginRequest googleLoginRequest,
                                          HttpServletResponse response) {
         return authService.googleLogin(googleLoginRequest, response);
+    }
+
+    @GetMapping("/verify-email")
+    public ResponseEntity<?> verifyEmail(@RequestParam String token) {
+        return emailVerificationService.verifyEmail(token);
+    }
+
+    @PostMapping("/resend-verification")
+    public ResponseEntity<?> resendVerification(@Valid @RequestBody ResendVerificationRequest request) {
+        return emailVerificationService.resendVerification(request.getEmail());
     }
 
     @PostMapping("/logout")

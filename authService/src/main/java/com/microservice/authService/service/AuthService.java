@@ -30,6 +30,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final GoogleTokenService googleTokenService;
+    private final EmailVerificationService emailVerificationService;
 
     private static final Pattern PASSWORD_PATTERN = Pattern.compile("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).{8,}$");
 
@@ -44,11 +45,17 @@ public class AuthService {
                 .email(request.getEmail())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .role(request.getRole())
+                .isEmailVerified(false)
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
                 .build();
         userRepository.save(user);
-        return ResponseEntity.status(201).body(new AuthResponse(user.getId(), user.getEmail(), user.getRole()));
+
+        try {
+            emailVerificationService.issueVerificationToken(user);
+        } catch (Exception ignored) {}
+
+        return ResponseEntity.status(201).body("Registration successful. Please check your email to verify your account.");
     }
 
     public ResponseEntity<?> login(LoginRequest request, HttpServletResponse  response) {
@@ -56,6 +63,9 @@ public class AuthService {
                 .orElse(null);
         if(user == null || !passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
             return ResponseEntity.status(401).body("Invalid credentials");
+        }
+        if(!user.isEmailVerified()) {
+            return ResponseEntity.status(403).body("Email not verified. Please check your inbox or request a new verification link.");
         }
         return issueLoginResponse(user, response);
     }
@@ -67,8 +77,16 @@ public class AuthService {
             User user = userRepository.findByGoogleSubject(googleUser.subject())
                     .or(() -> userRepository.findByEmail(googleUser.email()))
                     .map(existingUser -> {
+                        boolean changed = false;
                         if (existingUser.getGoogleSubject() == null) {
                             existingUser.setGoogleSubject(googleUser.subject());
+                            changed = true;
+                        }
+                        if (!existingUser.isEmailVerified()) {
+                            existingUser.setEmailVerified(true);
+                            changed = true;
+                        }
+                        if (changed) {
                             existingUser.setUpdatedAt(LocalDateTime.now());
                             return userRepository.save(existingUser);
                         }
@@ -82,6 +100,7 @@ public class AuthService {
                                 .passwordHash(passwordEncoder.encode(UUID.randomUUID().toString()))
                                 .googleSubject(googleUser.subject())
                                 .role(role)
+                                .isEmailVerified(true)
                                 .createdAt(LocalDateTime.now())
                                 .updatedAt(LocalDateTime.now())
                                 .build();
@@ -232,4 +251,3 @@ public class AuthService {
         response.addCookie(cookie);
     }
 }
-
