@@ -22,6 +22,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ProfileService {
 
+    private static final String DEFAULT_AVATAR = "https://res.cloudinary.com/dolfdzaf2/image/upload/v1778251943/user_w6ziip.png";
+
     private final UserProfileRepository userProfileRepository;
     private final QuizHistoryRepository quizHistoryRepository;
 
@@ -56,7 +58,7 @@ public class ProfileService {
     }
 
     @Caching(evict = {
-            @CacheEvict(value = "quizHistory", key = "'uuid-' + #event.userId")
+            @CacheEvict(value = "quizHistory", key = "T(java.util.UUID).fromString(#event.userId)")
     })
     public void recordQuizResult(QuizResultEvent event) {
         QuizHistory history = QuizHistory.builder()
@@ -70,6 +72,10 @@ public class ProfileService {
     }
 
     public ResponseEntity<List<UserDisplayNameResponse>> getDisplayNames(List<UUID> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return ResponseEntity.ok(List.of());
+        }
+
         List<UserDisplayNameResponse> names = userIds.stream()
                 .map(userId -> {
                     String name = userProfileRepository.findById(userId)
@@ -91,7 +97,7 @@ public class ProfileService {
         UserProfile profile = UserProfile.builder()
                 .id(userId)
                 .displayName(defaultName)
-                .avatarUrl(null)
+                .avatarUrl(DEFAULT_AVATAR)
                 .bio(null)
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())

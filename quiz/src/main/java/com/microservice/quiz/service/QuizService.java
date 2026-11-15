@@ -4,6 +4,7 @@ import com.microservice.quiz.dto.CustomQuizDto;
 import com.microservice.quiz.dto.QuestionDto;
 import com.microservice.quiz.dto.QuizResultEvent;
 import com.microservice.quiz.dto.Response;
+import com.microservice.quiz.exception.ResourceNotFoundException;
 import com.microservice.quiz.feign.ProfileInterface;
 import com.microservice.quiz.feign.QuizInterface;
 import com.microservice.quiz.model.Quiz;
@@ -16,6 +17,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -50,10 +52,13 @@ public class QuizService {
     //Method to get all the questions of a quiz
     @Cacheable(value = "quizQuestions", key = "#id")
     public List<QuestionDto> getQuizQuestions(int id) {
-        Quiz quiz = quizRepo.findById(id).orElseThrow(()-> new RuntimeException("Quiz id " + id + " not found"));
+        Quiz quiz = quizRepo.findById(id).orElseThrow(()-> new ResourceNotFoundException("Quiz id " + id + " not found"));
         List<Integer> questionId = quiz.getQuestionId();
-        List<QuestionDto> questions = quizInterface.getQuestionsFromId(questionId).getBody();
-        return questions;
+        if (questionId == null || questionId.isEmpty()) {
+            return new ArrayList<>();
+        }
+        ResponseEntity<List<QuestionDto>> response = quizInterface.getQuestionsFromId(questionId);
+        return (response != null && response.getBody() != null) ? response.getBody() : new ArrayList<>();
     }
 
     @Caching(evict = {
@@ -73,16 +78,24 @@ public class QuizService {
     //calculate the result
     //no longer in use
     public Integer calculateResult(int id, List<Response> responses, String userId) {
-        Integer correct = quizInterface.getScore(responses).getBody();
+        Integer correct = 0;
+        if (responses != null && !responses.isEmpty()) {
+            ResponseEntity<Integer> scoreResp = quizInterface.getScore(responses);
+            if (scoreResp != null && scoreResp.getBody() != null) {
+                correct = scoreResp.getBody();
+            }
+        }
 
         try {
-            Quiz quiz = quizRepo.findById(id).get();
-            profileInterface.recordQuizResult(new QuizResultEvent(
-                    userId,
-                    id,
-                    correct,
-                    quiz.getQuestionId().size()
-            ));
+            Quiz quiz = quizRepo.findById(id).orElse(null);
+            if (quiz != null && quiz.getQuestionId() != null) {
+                profileInterface.recordQuizResult(new QuizResultEvent(
+                        userId,
+                        id,
+                        correct,
+                        quiz.getQuestionId().size()
+                ));
+            }
         } catch (Exception ignored) {}
 
         return correct;

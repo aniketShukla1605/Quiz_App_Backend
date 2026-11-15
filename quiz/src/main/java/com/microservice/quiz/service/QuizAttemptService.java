@@ -1,6 +1,8 @@
 package com.microservice.quiz.service;
 
 import com.microservice.quiz.dto.*;
+import com.microservice.quiz.exception.BadRequestException;
+import com.microservice.quiz.exception.ResourceNotFoundException;
 import com.microservice.quiz.feign.QuizInterface;
 import com.microservice.quiz.feign.ResultServiceClient;
 import com.microservice.quiz.model.AttemptState;
@@ -145,7 +147,7 @@ public class QuizAttemptService {
 
     //SUBMIT
     @Caching(evict = {
-            @CacheEvict(value = "attemptResult", key = "#request.attemptId"),
+            @CacheEvict(value = "attemptResult", key = "#request.attemptId", condition = "#request.attemptId != null"),
             @CacheEvict(value = "studentAttempts", key = "#studentId")
     })
     public SubmitResponse submitQuiz(int quizId, UUID studentId, SubmitRequest request) {
@@ -153,7 +155,7 @@ public class QuizAttemptService {
         QuizAttempt attempt = findAttemptForRequest(quizId, studentId, request.getAttemptId());
 
         if (attempt == null) {
-            throw new RuntimeException("Attempt not found");
+            throw new ResourceNotFoundException("Attempt not found");
         }
 
         //already submitted
@@ -170,24 +172,31 @@ public class QuizAttemptService {
         }
 
         if (attempt.getState() != AttemptState.IN_PROGRESS) {
-            throw new  RuntimeException("Quiz already submitted at " + attempt.getSubmittedAt());
+            throw new BadRequestException("Quiz already submitted at " + attempt.getSubmittedAt());
         }
 
         try {
             //Save answers first
-            attempt.setAnswers(request.getAnswers());
+            List<AnswerEntry> answers = request.getAnswers() != null ? request.getAnswers() : new java.util.ArrayList<>();
+            attempt.setAnswers(answers);
 
             //Calculate score from Question Service
-            List<Response> responses = request.getAnswers().stream()
+            List<Response> responses = answers.stream()
                     .map(a -> new Response(a.getQuestionId(), a.getAnswer()))
                     .collect(Collectors.toList());
 
-            Integer score = quizInterface.getScore(responses).getBody();
+            Integer score = 0;
+            if (!responses.isEmpty()) {
+                ResponseEntity<Integer> scoreResp = quizInterface.getScore(responses);
+                if (scoreResp != null && scoreResp.getBody() != null) {
+                    score = scoreResp.getBody();
+                }
+            }
 
             //Get total questions as max score
             Quiz quiz = quizRepo.findById(quizId)
-                    .orElseThrow(() -> new RuntimeException("Quiz not found"));
-            int maxScore = quiz.getQuestionId().size();
+                    .orElseThrow(() -> new ResourceNotFoundException("Quiz not found"));
+            int maxScore = quiz.getQuestionId() != null ? quiz.getQuestionId().size() : 0;
 
             //check if manually submitted or not
             LocalDateTime now = LocalDateTime.now();
@@ -215,7 +224,7 @@ public class QuizAttemptService {
         } catch (ObjectOptimisticLockingFailureException e) {
             //return existing result
             QuizAttempt updated = attemptRepository.findFirstByQuizIdAndStudentIdOrderByStartTimeDesc(quizId, studentId)
-                    .orElseThrow();
+                    .orElseThrow(() -> new ResourceNotFoundException("Attempt not found after concurrency resolution"));
             return SubmitResponse.builder()
                             .attemptId(updated.getAttemptId())
                             .quizId(updated.getQuizId())
@@ -235,11 +244,17 @@ public class QuizAttemptService {
                     .map(a -> new Response(a.getQuestionId(), a.getAnswer()))
                     .collect(Collectors.toList());
 
-            Integer score = responses.isEmpty() ? 0 : quizInterface.getScore(responses).getBody();
+            Integer score = 0;
+            if (!responses.isEmpty()) {
+                ResponseEntity<Integer> scoreResp = quizInterface.getScore(responses);
+                if (scoreResp != null && scoreResp.getBody() != null) {
+                    score = scoreResp.getBody();
+                }
+            }
 
             Quiz quiz = quizRepo.findById(attempt.getQuizId())
-                    .orElseThrow(() -> new RuntimeException("Quiz not found"));
-            int maxScore = quiz.getQuestionId().size();
+                    .orElseThrow(() -> new ResourceNotFoundException("Quiz not found"));
+            int maxScore = quiz.getQuestionId() != null ? quiz.getQuestionId().size() : 0;
 
             LocalDateTime now = LocalDateTime.now();
             attempt.setState(AttemptState.GRADED);
@@ -264,7 +279,7 @@ public class QuizAttemptService {
         } catch (ObjectOptimisticLockingFailureException e) {
             QuizAttempt updated = attemptRepository
                     .findFirstByQuizIdAndStudentIdOrderByStartTimeDesc(attempt.getQuizId(), attempt.getStudentId())
-                    .orElseThrow();
+                    .orElseThrow(() -> new ResourceNotFoundException("Attempt not found after concurrency resolution"));
             return SyncResponse.builder()
                     .serverTime(LocalDateTime.now())
                     .expiryTime(updated.getExpiryTime())
@@ -281,10 +296,11 @@ public class QuizAttemptService {
     public AttemptResultResponse getAttemptResult(UUID attemptId) {
         return attemptRepository.findById(attemptId)
                 .filter(this::isFinalAttempt)
-                .map(attempt -> toAttemptResultResponse(attempt))
-                .orElseThrow();
+                .map(this::toAttemptResultResponse)
+                .orElseThrow(() -> new ResourceNotFoundException("Final attempt not found for id: " + attemptId));
     }
 
+    @Cacheable(value = "studentAttempts", key = "#studentId")
     public List<AttemptResultResponse> getStudentAttemptResults(UUID studentId) {
         List<AttemptResultResponse> attempts = attemptRepository
                 .findByStudentIdAndStateInOrderBySubmittedAtDesc(

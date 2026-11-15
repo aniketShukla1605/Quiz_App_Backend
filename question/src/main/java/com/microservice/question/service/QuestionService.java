@@ -63,11 +63,17 @@ public class QuestionService {
 
     @Cacheable(value = "questionsFromId", key = "#ids.toString()")
     public List<QuestionDto> getQuestionsFromId(List<Integer> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return new ArrayList<>();
+        }
+
         List<QuestionDto> questionDTOS = new ArrayList<>();
         List<Question> questions = new ArrayList<>();
 
         for (Integer id : ids) {
-            questions.add(questionRepo.findById(id).get());
+            if (id != null) {
+                questionRepo.findById(id).ifPresent(questions::add);
+            }
         }
         for (Question question : questions) {
             QuestionDto questionDTO = new QuestionDto();
@@ -86,12 +92,21 @@ public class QuestionService {
 
     //score depends on user answer so it is not cacheable
     public Integer getScore(List<Response> responses) {
+        if (responses == null || responses.isEmpty()) {
+            return 0;
+        }
+
         int correct = 0;
 
-        for(Response response : responses){
-            Question question = questionRepo.findById(response.getId()).orElseThrow(()-> new RuntimeException("Question not found"));
-            if(response.getResponse().equals(question.getCorrectAnswer())){
-                correct ++;
+        for (Response response : responses) {
+            if (response == null || response.getResponse() == null) {
+                continue;
+            }
+            Question question = questionRepo.findById(response.getId()).orElse(null);
+            if (question != null && question.getCorrectAnswer() != null) {
+                if (response.getResponse().trim().equalsIgnoreCase(question.getCorrectAnswer().trim())) {
+                    correct++;
+                }
             }
         }
         return correct;
@@ -133,7 +148,8 @@ public class QuestionService {
             CustomQuizDto customQuizDto = new CustomQuizDto(
                     request.getQuizTitle(),
                     request.getCategory(),
-                    questionIds
+                    questionIds,
+                    request.getDuration()
             );
 
             ResponseEntity<String> quizResponse = quizServiceClient.createCustomQuiz(customQuizDto);

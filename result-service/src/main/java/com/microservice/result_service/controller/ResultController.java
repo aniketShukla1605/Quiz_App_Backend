@@ -62,4 +62,12 @@ public class ResultController {
             @RequestParam(defaultValue = "10") int limit) {
         return ResponseEntity.ok(resultService.getQuizLeaderboard(title, limit));
     }
+
+    // Search leaderboard by quiz title or ID from path
+    @GetMapping("/quiz/{titleOrId}/leaderboard")
+    public ResponseEntity<List<LeaderboardEntryResponse>> getQuizLeaderboardByPath(
+            @PathVariable String titleOrId,
+            @RequestParam(defaultValue = "10") int limit) {
+        return ResponseEntity.ok(resultService.getQuizLeaderboard(titleOrId, limit));
+    }
 }

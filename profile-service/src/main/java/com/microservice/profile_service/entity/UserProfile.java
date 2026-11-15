@@ -23,6 +23,7 @@ public class UserProfile {
 
     private String displayName;
     //Default avatar
+    @Builder.Default
     private String avatarUrl = "https://res.cloudinary.com/dolfdzaf2/image/upload/v1778251943/user_w6ziip.png";
     private String bio;
 

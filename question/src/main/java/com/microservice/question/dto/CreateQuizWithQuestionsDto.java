@@ -14,4 +14,5 @@ public class CreateQuizWithQuestionsDto {
     private String quizTitle;
     private String category;
     private List<Question> questions; // full question objects from teacher
+    private Integer duration;
 }

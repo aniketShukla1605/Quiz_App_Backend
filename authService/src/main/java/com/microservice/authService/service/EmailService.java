@@ -15,13 +15,13 @@ public class EmailService {
 
     private final JavaMailSender mailSender;
 
-    @Value("no-reply@quizapp.local")
+    @Value("${spring.mail.from:${spring.mail.username:no-reply@quizapp.local}}")
     private String fromAddress;
 
     @Value("${spring.mail.username:}")
     private String mailUsername;
 
-    @Value("http://localhost:5173")
+    @Value("${frontend.url:${FRONTEND_URL:http://localhost:5173}}")
     private String frontendUrl;
 
     EmailService(JavaMailSender mailSender) {
@@ -41,15 +41,16 @@ public class EmailService {
         }
 
         try {
+            String sender = StringUtils.hasText(mailUsername) ? mailUsername : fromAddress;
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, "UTF-8");
-            helper.setFrom(fromAddress);
+            helper.setFrom(sender);
             helper.setTo(toEmail);
             helper.setSubject("Verify your QuizApp email address");
             helper.setText(buildVerificationHtml(verifyLink), true);
             mailSender.send(message);
         } catch (Exception e) {
-            log.error("Failed to send verification email to {}: {}", toEmail, e.getMessage());
+            log.error("Failed to send verification email to {}: {}. Verification link: {}", toEmail, e.getMessage(), verifyLink);
         }
     }
 

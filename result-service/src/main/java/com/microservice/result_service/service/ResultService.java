@@ -8,6 +8,7 @@ import com.microservice.result_service.dto.ResultHistoryResponse;
 import com.microservice.result_service.dto.ScoreSummaryResponse;
 import com.microservice.result_service.dto.UserDisplayNameResponse;
 import com.microservice.result_service.entity.ResultHistory;
+import com.microservice.result_service.exception.ResourceNotFoundException;
 import com.microservice.result_service.feign.ProfileServiceClient;
 import com.microservice.result_service.feign.QuizAttemptClient;
 import com.microservice.result_service.feign.QuizServiceClient;
@@ -66,7 +67,7 @@ public class ResultService {
                 .orElseGet(() -> fetchAndStoreAttempt(attemptId));
 
         if (result == null || !result.getStudentId().equals(studentId)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Result not found");
+            throw new ResourceNotFoundException("Result not found");
         }
 
         return toHistoryResponse(result);
@@ -109,14 +110,23 @@ public class ResultService {
     }
 
     /**
-     * Look up quiz by title, then build a ranked leaderboard with display names.
+     * Look up quiz by title or ID, then build a ranked leaderboard with display names.
      */
-    @Cacheable(value = "leaderboard", key = "#title + '-' + #limit")
-    public List<LeaderboardEntryResponse> getQuizLeaderboard(String title, int limit) {
-        // 1. Resolve title → quizId
-        Integer quizId = resolveQuizIdByTitle(title);
+    @Cacheable(value = "leaderboard", key = "#titleOrId + '-' + #limit")
+    public List<LeaderboardEntryResponse> getQuizLeaderboard(String titleOrId, int limit) {
+        if (titleOrId == null || titleOrId.isBlank()) {
+            throw new ResourceNotFoundException("Quiz title or ID is required");
+        }
+
+        Integer quizId = null;
+        try {
+            quizId = Integer.parseInt(titleOrId.trim());
+        } catch (NumberFormatException ignored) {
+            quizId = resolveQuizIdByTitle(titleOrId.trim());
+        }
+
         if (quizId == null) {
-            throw new  ResponseStatusException(HttpStatus.NOT_FOUND, "Quiz not found");
+            throw new ResourceNotFoundException("Quiz not found: " + titleOrId);
         }
 
         // 2. Fetch top results for that quiz
@@ -177,29 +187,42 @@ public class ResultService {
     }
 
     private Map<UUID, String> resolveDisplayNames(List<UUID> userIds) {
+        if (userIds == null || userIds.isEmpty()) return Map.of();
         try {
             ResponseEntity<List<UserDisplayNameResponse>> resp = profileServiceClient.getDisplayNames(userIds);
             List<UserDisplayNameResponse> names = resp.getBody();
             if (names == null) return Map.of();
             return names.stream()
-                    .collect(Collectors.toMap(UserDisplayNameResponse::getUserId, UserDisplayNameResponse::getDisplayName));
+                    .collect(Collectors.toMap(
+                            UserDisplayNameResponse::getUserId,
+                            UserDisplayNameResponse::getDisplayName,
+                            (existing, replacement) -> existing
+                    ));
         } catch (Exception e) {
             return Map.of();
         }
     }
 
     private void syncResultsFromQuiz(UUID studentId) {
-        ResponseEntity<List<QuizAttemptResultResponse>> response = quizAttemptClient.getStudentAttemptResults(studentId);
-        List<QuizAttemptResultResponse> attempts = response.getBody();
-        if (attempts == null) return;
-        attempts.forEach(attempt -> upsertResult(toRecordRequest(attempt)));
+        try {
+            ResponseEntity<List<QuizAttemptResultResponse>> response = quizAttemptClient.getStudentAttemptResults(studentId);
+            List<QuizAttemptResultResponse> attempts = response.getBody();
+            if (attempts == null) return;
+            attempts.forEach(attempt -> upsertResult(toRecordRequest(attempt)));
+        } catch (Exception ignored) {
+            // Quiz service may be temporarily unavailable; fall back to local database records
+        }
     }
 
     private ResultHistory fetchAndStoreAttempt(UUID attemptId) {
-        ResponseEntity<QuizAttemptResultResponse> response = quizAttemptClient.getAttemptResult(attemptId);
-        QuizAttemptResultResponse attempt = response.getBody();
-        if (attempt == null) return null;
-        return upsertResult(toRecordRequest(attempt));
+        try {
+            ResponseEntity<QuizAttemptResultResponse> response = quizAttemptClient.getAttemptResult(attemptId);
+            QuizAttemptResultResponse attempt = response.getBody();
+            if (attempt == null) return null;
+            return upsertResult(toRecordRequest(attempt));
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private ResultHistory upsertResult(RecordResultRequest request) {
