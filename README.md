@@ -150,7 +150,6 @@ Service	Port
 - fast Caching using Redis
 
 ## 🔮 Future Enhancements
-- Frontend Integration
 - Kafka for communication
 - Timer-based quizzes using websocket
 
