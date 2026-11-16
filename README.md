@@ -152,6 +152,7 @@ Service	Port
 ## 🔮 Future Enhancements
 - Kafka for communication
 - Timer-based quizzes using websocket
+- AWS Deployment
 
 ## 👨‍💻 Author
 Aniket Shukla
